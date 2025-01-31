@@ -19,13 +19,15 @@ If you are on windows and only want to use the GUI, the easiest thing is to down
 -----------------------------------
 If you need to embed the functions for calculating mobility within your own python code (e.g. automated analysis of large numbers of data sets), and/or prefer running the GUI from within your own python installation, simply use:
 
-pip install mobilityapp
+    pip install mobilityapp
 
-Calling mobilityapp from the command line (e.g. Anaconda prompt) runs the GUI
+To run the GUI, simply run from the command line:
+
+    mobilityapp
 
 The 'examples' Jupyter notebook runs through how to use each module of the MobilityApp. If Jupyter isn't already installed:
 
-pip install jupyterlab
+    pip install jupyterlab
 
 
 
@@ -35,24 +37,23 @@ To install an editable version using python installed from Anaconda:
 
 In git bash:
 
-cd C:/git
+    cd C:/git
 
-git clone https://github.com/djcarrad/MobilityApp
+    git clone https://github.com/djcarrad/MobilityApp
 
 
 In Anaconda Prompt:
 
-conda create -n mobility python
+    conda create -n mobility python
 
-activate mobility
+    activate mobility
 
-pip install -e C:/git/MobilityApp
+    pip install -e C:/git/MobilityApp
 
-pip install jupyterlab
+    pip install jupyterlab
 
+The GUI can be run from Anaconda Prompt with:
 
-The GUI can be run from Anaconda Prompt with simply:
-
-mobilityapp
+    mobilityapp
 
 *Note: Only tested on Windows, but the code is pure python with a tkinter gui, so should work fine on Mac and *nix.
