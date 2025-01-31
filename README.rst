@@ -56,4 +56,4 @@ The GUI can be run from Anaconda Prompt with:
 
     mobilityapp
 
-*Note: Only tested on Windows, but the code is pure python with a tkinter gui, so should work fine on Mac and *nix.
+*Note: Only tested on Windows, but the code is pure python with a tkinter gui, so should work fine on Mac and 'nix.
