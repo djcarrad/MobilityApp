@@ -1,21 +1,22 @@
-# MobilityApp
+MobilityApp
+===================================
 Python-based tool to analyse conductance vs gate voltage data and extract mobility and density.
 
 
 Installation:
-
+===================================
 There are three options for installing, from easiest/most limited to hardest/greatest flexibility:
 
 
 
 1. GUI only (Windows only)
-
+-----------------------------------
 If you are on windows and only want to use the GUI, the easiest thing is to download 'mobilityapp.exe' from the file list above.
 
 
 
 2. GUI plus modules in python (all systems*)
-
+-----------------------------------
 If you need to embed the functions for calculating mobility within your own python code (e.g. automated analysis of large numbers of data sets), and/or prefer running the GUI from within your own python installation, simply use:
 
 pip install mobilityapp
@@ -29,7 +30,7 @@ pip install jupyterlab
 
 
 3. Editable installation (all systems*)
-
+-----------------------------------
 To install an editable version using python installed from Anaconda:
 
 In git bash:
