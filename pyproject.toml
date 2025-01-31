@@ -1,0 +1,11 @@
+[project]
+name = 'mobilityapp'
+version = '0.0.1'
+description = 'Python-based tool to analyse conductance vs gate voltage data and extract mobility and density.'
+
+[project.scripts]
+mobilityapp = 'mobilityapp:main'
+
+[build-system]
+requires = ['flit_core>=3.2']
+build-backend = 'flit_core.buildapi'
