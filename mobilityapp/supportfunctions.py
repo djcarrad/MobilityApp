@@ -1,5 +1,7 @@
 import numpy as np
 from lmfit import Model, Parameters, minimize
+from scipy.signal import savgol_filter
+import matplotlib.pyplot as plt
 
 from tkinter import *
 import tkinter as tk
@@ -59,23 +61,21 @@ class CreateToolTip(object):
             
 def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax):
     
-    if Vmin != 'Min':
+    minoptions=['Min','','min']
+    if Vmin not in minoptions:
         Vmin=float(Vmin)
         min_ind=(np.abs(Vg - Vmin)).argmin()
     else:
         min_ind=1 #To avoid ends
         Vmin=Vg[min_ind]
-    if Vmax != 'Max':
+    maxoptions=['Max','','max']
+    if Vmax not in maxoptions:
         Vmax=float(Vmax)
         max_ind=(np.abs(Vg - Vmax)).argmin()
     else:
         max_ind=int(Vg.shape[0]-2)
         Vmax=Vg[max_ind]
 
-    initial_a = -1
-    initial_x0 = (Vmax-Vmin)/2
-    initial_u0 = (Vmax-Vmin)/10
-        
     def asym_lorentzian(A, x0, a, u0, x):
         u = 2 * u0 / (1 + np.exp(a * (x - x0)))
         return 2 * A / (np.pi * u) * (1 + 4 * ((x - x0) / u)**2)**-1
@@ -91,11 +91,11 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax):
     # Create a lmfit Parameters object with initial guesses for the asymmetric lorentzian
     params = Parameters()
     params.add('A', value=np.max(dGdVg),min=0)  # Use max of data as the initial guess for A
-    params.add('a', value=initial_a,max=0)
-    params.add('x0', value=initial_x0)
-    params.add('u0', value=initial_u0,min=0)
-
-        # Define the residual function to fit the gradient
+    params.add('x0', value=(Vmax-Vmin)/2)  # Use the middle of the data as the initial guess for x0
+    params.add('a', value=-1,max=0)
+    params.add('u0', value=(Vmax-Vmin)/10,min=0)
+    
+    # Define the residual function to fit the gradient
     def residual(params, x, data):
         model_values = model(params, x)
         return data - model_values
@@ -115,7 +115,7 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax):
     if smoothing !=0:
         G_infl=np.interp(Vg_infl, Vg, Gsmooth)#Gsmooth[infl_ind]
     else:
-        G_infl=np.interp(Vg_infl, Vg, Gsmooth)#G[infl_ind]  #Value of G at the inflection point
+        G_infl=np.interp(Vg_infl, Vg, G)#G[infl_ind]  #Value of G at the inflection point
 
     G_intercept = G_infl-infl_slope*Vg_infl  #Finding 'threshold' voltage
     Vth=-G_intercept/infl_slope
@@ -126,7 +126,7 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax):
 
     V0 = Vth-2*(Vg_infl-Vth)         #Vg for which density extrapolates to zero.
 
-    return V0,Vth,Vg_infl,V_Rs,thresholdline,deriv_fit
+    return V0,Vth,Vg_infl,V_Rs,thresholdline,deriv_fit,result
 
 def drude(x, Rs,mu,Vth,L,c):    # drude fit 
     return 1/(Rs + L**2/(mu*c*(x-Vth)))
@@ -140,7 +140,7 @@ def perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,c):
     params_Rs.add('L',value=L,vary=False)
     params_Rs.add('c',value=c,vary=False)
 
-    # Perform the Drude fit over limited range
+    # Perform the Drude fit over limited range, where Rchannel starts to fall below Rs
     V_Rs_ind = (np.abs(Vg - V_Rs)).argmin()
     result_drudeRs = model_drude.fit(G[V_Rs_ind:], params_Rs, x=Vg[V_Rs_ind:])
     Rs = result_drudeRs.params['Rs'].value             ## This is THE value of Rs
@@ -148,11 +148,11 @@ def perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,c):
 
     Rs_fit = drude(Vg[V_Rs_ind:],Rs,mu_Rs,V0,L,c)
     
-    return Rs,Rs_fit,result_drudeRs,V_Rs_ind
+    return Rs,Rs_fit,V_Rs_ind,result_drudeRs
 
 def perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,c):
     params_drude = Parameters()
-    params_drude.add('Rs',value=initial_Rs) #Allow to var
+    params_drude.add('Rs',value=initial_Rs) #Allow to vary for the purpose of illustration.
     params_drude.add('mu',value=initial_mu)
     params_drude.add('Vth',value=Vth) #Can/should vary now.
     params_drude.add('L',value=L,vary=False)
@@ -167,4 +167,74 @@ def perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,c):
     
     drude_fit = drude(Vg[Vth_ind:],Rs_drude,mu_drude,Vth_drude,L,c)
     
-    return mu_drude,drude_fit,Rs_drude,result_drude,Vth_ind
+    return mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude
+
+def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initial_mu,plotting=True):
+
+    datadict={}
+    paramdict={}
+    
+    if Vg[-1]<Vg[0]:
+        Vg=Vg[::-1]
+        G=G[::-1]
+    datadict['Vg (V)']=Vg
+    datadict['G (S)']=G
+
+    if smoothing!=0:
+        Gsmooth=savgol_filter(G, int(G.shape[0]*smoothing), 5, deriv=0, delta=1.0, axis=-1, mode='interp', cval=0.0)
+        dGdVg = np.gradient(Gsmooth, Vg)
+    else:
+        Gmooth=0 #Necessary later because I'm not a good developer, sorry
+        dGdVg = np.gradient(G, Vg)
+    datadict['dGdVg (S/V)']=dGdVg
+
+    V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin,Vmax=Vmax)
+    datadict['dGdVg fit (S/V)']=deriv_fit
+    datadict['Inflection fit (S)']=inflectionline
+    paramdict['V0 (V)']=V0
+    paramdict['Vth (V)']=Vth
+    paramdict['Vg_infl (V)']=Vg_infl
+    paramdict['V_Rs (V)']=V_Rs
+        
+    Rs,Rs_fit,V_Rs_ind,result_drudeRs=perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,C)
+    paramdict['Rs (Ohm)']=Rs
+    datadict['Vg for Rs fit (V)']=Vg[V_Rs_ind:]
+    datadict['Rs fit (S)']=Rs_fit
+    
+    density=CperA*(Vg-V0)/1.602176634e-19
+    mu_eff=L**2/(C*(Vg-V0)*((1/G)-Rs))
+    datadict['density (1/m2)']=density
+    datadict['mu_eff (m2/Vs)']=mu_eff
+    
+    mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude=perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,C)
+    paramdict['mu_drude (m2/Vs)']=mu_drude
+    paramdict['Rs_drude (Ohm)']=Rs_drude
+    datadict['Vg for mu_FET fit (V)']=Vg[Vth_ind:]
+    datadict['mu_FET fit (S)']=drude_fit
+    
+    if plotting==True:
+        plt.plot(Vg,G,label='data')
+        plt.plot(Vg,inflectionline,label='inflection')
+        plt.plot(Vg[V_Rs_ind:],Rs_fit,label='Rs fit')
+        plt.plot(Vg[Vth_ind:],drude_fit,label='drude fit')
+        plt.xlabel('Vg (V)')
+        plt.ylabel('Conductance (S)')
+        plt.ylim([G.min()-(G.max()-G.min())/10,G.max()+(G.max()-G.min())/10])
+        plt.legend()
+        plt.show()
+
+        plt.plot(Vg,dGdVg)
+        plt.plot(Vg,deriv_fit)
+        plt.xlabel('Vg (V)')
+        plt.ylabel('$dG/dVg$ (S/V)')
+        plt.show()
+        
+        mu_drude_array=np.full(Vg.shape[0],mu_drude)
+        plotstart=(np.abs(Vg - (2*Vth-Vg_infl))).argmin()
+        plt.plot(density[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,label='mu_eff')
+        plt.plot(density[plotstart:]*1e-12/1e4,mu_drude_array[plotstart:]*1e4,label='mu_drude')
+        plt.xlabel('Carrier density x 10$^{12}$ (cm$^{-2}$)')
+        plt.ylabel('Mobility (cm$^2$/(Vs))')
+        plt.legend()
+        plt.show()
+    return datadict,paramdict

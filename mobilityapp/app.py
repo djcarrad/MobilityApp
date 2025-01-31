@@ -117,8 +117,7 @@ def run():
     Vsd.set('0')
     Vsd_entry=Entry(GorIframe,textvariable=Vsd,width=6).grid(row=1,column=2)
     Label(GorIframe, text='(V)').grid(row=1,column=3,sticky='W')
-    # for child in dataframe.winfo_children():
-    #     child.grid_configure(pady=2)
+
         
     ## Enter parameters
     paramsframe = ttk.Frame(root, padding='3 3 12 12')
@@ -286,7 +285,7 @@ def run():
         # try:
         if smoothing==0:
             Gsmooth=0
-        V0,Vth,Vg_infl,V_Rs,thresholdline,deriv_fit=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin.get(),Vmax=Vmax.get())
+        V0,Vth,Vg_infl,V_Rs,thresholdline,deriv_fit,result_deriv_fit=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin.get(),Vmax=Vmax.get())
         paramdict['V0 (V)']=V0
         paramdict['Vth (V)']=Vth
         paramdict['Vg_infl (V)']=Vg_infl
@@ -362,7 +361,7 @@ def run():
         
         Vg,G=VgandG(convertunits=True)
             
-        Rs,Rs_fit,result_drudeRs,V_Rs_ind=perform_Rs_fit(Vg,G,
+        Rs,Rs_fit,V_Rs_ind,result_drudeRs=perform_Rs_fit(Vg,G,
                                                         paramdict['V0 (V)'],paramdict['V_Rs (V)'],
                                                         float(initial_Rs.get()),float(initial_mu.get())*1e-4,
                                                         float(L.get()),float(c.get()))
@@ -388,7 +387,7 @@ def run():
             
         ax[2]=fig3.add_subplot()
         ax[2].plot(density[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,'k',label='mu_eff')
-        ax[2].set_xlabel('Electron density x 10$^{12}$ (cm$^{-2}$)')
+        ax[2].set_xlabel('Carrier density x 10$^{12}$ (cm$^{-2}$)')
         ax[2].set_ylabel('Mobility (cm$^2$/(Vs))')
         ax[2].legend()
         fig3.tight_layout()
@@ -416,7 +415,7 @@ def run():
         
         Vg,G=VgandG(convertunits=True)
             
-        mu_drude,drude_fit,Rs_drude,result_drude,Vth_ind=perform_drude_fit(Vg,G,
+        mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude=perform_drude_fit(Vg,G,
                                                         paramdict['Vth (V)'],
                                                         float(initial_Rs.get()),float(initial_mu.get())*1e-4,
                                                         float(L.get()),float(c.get()))
