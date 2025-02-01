@@ -182,10 +182,16 @@ def run():
     def VgandG(convertunits=False):
         Vg=data[Vgcolumn.get()]
         G=data[Gcolumn.get()]
-        if Vg[-1]<Vg[0]:
+
+        if Vg[-1]<Vg[0]: #make sure Vg ascending; easier to work with
             Vg=Vg[::-1]
             G=G[::-1]
-            
+
+        if np.average(G[0:6])>np.average(G[-6:-1]):
+            holes=True
+        else:
+            holes=False
+
         if GorI.get()=='I provided':
             convertunits=False
             G=G/float(Vsd.get())
@@ -196,7 +202,7 @@ def run():
             elif Gunits.get()=='e2/h':
                 G=G*7.748091729e-5/2
                 
-        return Vg,G
+        return Vg,G,holes
         
         
     ## Window to plot the loaded data
@@ -218,7 +224,7 @@ def run():
     canvas1.get_tk_widget().pack()#(side=TOP, fill=BOTH, expand=1)
     def plot_data():
         fig1.clf()
-        Vg,G=VgandG(convertunits=False)
+        Vg,G,holes=VgandG(convertunits=False)
         
         exportdatadict['Vg (V)']=Vg
         exportdatadict['G (S)']=G
@@ -259,9 +265,9 @@ def run():
     canvas2.get_tk_widget().pack()#(side=TOP, fill=BOTH, expand=1)
     def plot_deriv():
         #First do the analysis
-        Vg,G=VgandG(convertunits=True)
-            
-            #Range over which to smooth, as a percentage of the data range
+        Vg,G,holes=VgandG(convertunits=True)
+        
+        #Range over which to smooth, as a percentage of the data range
         smoothing=float(smoothingbut.get())/100
         
         if smoothing!=0:
@@ -269,13 +275,19 @@ def run():
             dGdVg = np.gradient(Gsmooth, Vg)
         else:
             dGdVg = np.gradient(G, Vg)
+
+        if holes:
+            dGdVg=-dGdVg[::-1]
             
         exportdatadict['dGdVg (S/V)']=dGdVg
         set_exportdata()
             
         fig2.clf()
         ax[1]=fig2.add_subplot()
-        ax[1].plot(Vg,dGdVg*1e3,'k',label='data')
+        if holes:
+            ax[1].plot(Vg,-dGdVg[::-1]*1e3,'k',label='data')
+        else:
+            ax[1].plot(Vg,dGdVg*1e3,'k',label='data')
         ax[1].set_xlabel('Gate voltage (V)')
         ax[1].set_ylabel(f'$dG/dV_g$ (mS/V)')
         ax[1].legend()
@@ -285,7 +297,7 @@ def run():
         # try:
         if smoothing==0:
             Gsmooth=0
-        V0,Vth,Vg_infl,V_Rs,thresholdline,deriv_fit,result_deriv_fit=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin.get(),Vmax=Vmax.get())
+        V0,Vth,Vg_infl,V_Rs,thresholdline,deriv_fit,result_deriv_fit=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin.get(),Vmax=Vmax.get(),holes=holes)
         paramdict['V0 (V)']=V0
         paramdict['Vth (V)']=Vth
         paramdict['Vg_infl (V)']=Vg_infl
@@ -296,6 +308,9 @@ def run():
         exportdatadict['dGdVg fit (S/V)']=deriv_fit
         exportdatadict['Inflection fit (S)']=thresholdline
         set_exportdata()
+        # if holes:
+        #     ax[1].plot(Vg,-deriv_fit[::-1]*1e3,label='fit')
+        # else:
         ax[1].plot(Vg,deriv_fit*1e3,label='fit')
         ax[1].legend()
         fig2.canvas.draw()
@@ -359,17 +374,20 @@ def run():
     def plot_mobility():
         fig3.clf()
         
-        Vg,G=VgandG(convertunits=True)
+        Vg,G,holes=VgandG(convertunits=True)
             
         Rs,Rs_fit,V_Rs_ind,result_drudeRs=perform_Rs_fit(Vg,G,
                                                         paramdict['V0 (V)'],paramdict['V_Rs (V)'],
                                                         float(initial_Rs.get()),float(initial_mu.get())*1e-4,
-                                                        float(L.get()),float(c.get()))
+                                                        float(L.get()),float(c.get()),holes)
         
         paramdict['Rs (Ohm)']=Rs             
         set_exportparams()
         
-        exportdatadict['Vg for Rs fit (V)']=Vg[V_Rs_ind:]
+        if holes:
+            exportdatadict['Vg for Rs fit (V)']=Vg[:V_Rs_ind]
+        else:
+            exportdatadict['Vg for Rs fit (V)']=Vg[V_Rs_ind:]
         exportdatadict['Rs fit (S)']=Rs_fit
         
         if Ctype.get()=='Width':
@@ -377,8 +395,12 @@ def run():
         else:
             Cperarea=float(W.get())
         #density=float(c.get())*(Vg-paramdict['V0 (V)'])/(float(L.get())*float(W.get())*1.6e-19)
-        density=Cperarea*(Vg-paramdict['V0 (V)'])/1.602176634e-19
-        mu_eff=float(L.get())**2/(float(c.get())*(Vg-paramdict['V0 (V)'])*((1/G)-Rs))
+        if holes:
+            density=Cperarea*(paramdict['V0 (V)']-Vg)/1.602176634e-19
+            mu_eff=float(L.get())**2/(float(c.get())*(paramdict['V0 (V)']-Vg)*((1/G)-Rs))
+        else:
+            density=Cperarea*(Vg-paramdict['V0 (V)'])/1.602176634e-19
+            mu_eff=float(L.get())**2/(float(c.get())*(Vg-paramdict['V0 (V)'])*((1/G)-Rs))
         exportdatadict['density (1/m2)']=density
         exportdatadict['mu_eff (m2/Vs)']=mu_eff
         
@@ -386,7 +408,10 @@ def run():
         plotstart=(np.abs(Vg - (2*paramdict['Vth (V)']-paramdict['Vg_infl (V)']))).argmin()
             
         ax[2]=fig3.add_subplot()
-        ax[2].plot(density[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,'k',label='mu_eff')
+        if holes:
+            ax[2].plot(density[:plotstart]*1e-12/1e4,mu_eff[:plotstart]*1e4,'k',label='mu_eff')
+        else:
+            ax[2].plot(density[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,'k',label='mu_eff')
         ax[2].set_xlabel('Carrier density x 10$^{12}$ (cm$^{-2}$)')
         ax[2].set_ylabel('Mobility (cm$^2$/(Vs))')
         ax[2].legend()
@@ -399,7 +424,7 @@ def run():
             elif Gunits.get()=='e2/h':
                 Rs_fit=Rs_fit/7.748091729e-5*2
         
-        ax[0].plot(Vg[V_Rs_ind:],Rs_fit,label='fit for R_s')
+        ax[0].plot(exportdatadict['Vg for Rs fit (V)'],Rs_fit,label='fit for R_s')
         ax[0].legend()
         fig1.canvas.draw()
         
@@ -413,24 +438,30 @@ def run():
                 'bad, try checking the initial fit values for R_s and mu')
     def plot_drude():
         
-        Vg,G=VgandG(convertunits=True)
+        Vg,G,holes=VgandG(convertunits=True)
             
         mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude=perform_drude_fit(Vg,G,
                                                         paramdict['Vth (V)'],
                                                         float(initial_Rs.get()),float(initial_mu.get())*1e-4,
-                                                        float(L.get()),float(c.get()))
+                                                        float(L.get()),float(c.get()),holes)
         
         paramdict['mu_drude (m2/Vs)']=mu_drude
         paramdict['Rs_drude (Ohm)']=Rs_drude           
         set_exportparams()
         
-        exportdatadict['Vg for mu_FET fit (V)']=Vg[Vth_ind:]
+        if holes:
+            exportdatadict['Vg for mu_FET fit (V)']=Vg[:Vth_ind]
+        else:
+            exportdatadict['Vg for mu_FET fit (V)']=Vg[Vth_ind:]
         exportdatadict['mu_FET fit (S)']=drude_fit
         set_exportdata()
         
         mu_drude_array=np.full(Vg.shape[0],mu_drude) # Make an array of the correct size for plotting
         plotstart=(np.abs(Vg - (2*paramdict['Vth (V)']-paramdict['Vg_infl (V)']))).argmin()
-        ax[2].plot(exportdatadict['density (1/m2)'][plotstart:]*1e-12/1e4,mu_drude_array[plotstart:]*1e4,label='mu_FET')
+        if holes:
+            ax[2].plot(exportdatadict['density (1/m2)'][:plotstart]*1e-12/1e4,mu_drude_array[:plotstart]*1e4,label='mu_FET')
+        else:
+            ax[2].plot(exportdatadict['density (1/m2)'][plotstart:]*1e-12/1e4,mu_drude_array[plotstart:]*1e4,label='mu_FET')
         ax[2].legend()
         fig3.canvas.draw()
         
@@ -440,7 +471,7 @@ def run():
             elif Gunits.get()=='e2/h':
                 drude_fit=drude_fit/7.748091729e-5*2
         
-        ax[0].plot(Vg[Vth_ind:],drude_fit,label='mu_FET fit')
+        ax[0].plot(exportdatadict['Vg for mu_FET fit (V)'],drude_fit,label='mu_FET fit')
         ax[0].legend()
         fig1.canvas.draw()
         

@@ -59,7 +59,7 @@ class CreateToolTip(object):
         if tw:
             tw.destroy()
             
-def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax):
+def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax,holes=False):
     
     minoptions=['Min','','min']
     if Vmin not in minoptions:
@@ -91,8 +91,8 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax):
     # Create a lmfit Parameters object with initial guesses for the asymmetric lorentzian
     params = Parameters()
     params.add('A', value=np.max(dGdVg),min=0)  # Use max of data as the initial guess for A
-    params.add('x0', value=(Vmax-Vmin)/2)  # Use the middle of the data as the initial guess for x0
-    params.add('a', value=-1,max=0)
+    params.add('x0', value=(Vmax+Vmin)/2)  # Use the middle of the data as the initial guess for x0
+    params.add('a', -1,max=0)
     params.add('u0', value=(Vmax-Vmin)/10,min=0)
     
     # Define the residual function to fit the gradient
@@ -110,7 +110,12 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax):
 
     infl_slope=deriv_fitfine.max()    #Slope in G(Vg) at the inflection point is simply the maximum of the derivative
     infl_ind=deriv_fitfine.argmax()   #Array index where inflection point occurs
-    Vg_infl=Vgfine[infl_ind]             #Value of Vg at the inflection point
+    if holes:
+        infl_slope=-infl_slope
+        deriv_fit=-deriv_fit[::-1]
+        Vg_infl=Vgfine[-infl_ind]             #Value of Vg at the inflection point
+    else:
+        Vg_infl=Vgfine[infl_ind]             #Value of Vg at the inflection point
 
     if smoothing !=0:
         G_infl=np.interp(Vg_infl, Vg, Gsmooth)#Gsmooth[infl_ind]
@@ -128,44 +133,61 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax):
 
     return V0,Vth,Vg_infl,V_Rs,thresholdline,deriv_fit,result
 
-def drude(x, Rs,mu,Vth,L,c):    # drude fit 
-    return 1/(Rs + L**2/(mu*c*(x-Vth)))
+def drude(x, Rs,mu,Vth,L,c,holes=False):    # drude fit 
+    if holes:
+        return 1/(Rs + L**2/(mu*c*(Vth-x)))
+    else:
+        return 1/(Rs + L**2/(mu*c*(x-Vth)))
 model_drude = Model(drude)
 
-def perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,c):
+def perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,c,holes):
     params_Rs = Parameters()
     params_Rs.add('Rs',value=initial_Rs)
     params_Rs.add('mu',value=initial_mu)
     params_Rs.add('Vth',value=V0,vary=False) #Do not vary this parameter, since we know it now.
     params_Rs.add('L',value=L,vary=False)
     params_Rs.add('c',value=c,vary=False)
+    params_Rs.add('holes',value=holes,vary=False)
 
     # Perform the Drude fit over limited range, where Rchannel starts to fall below Rs
     V_Rs_ind = (np.abs(Vg - V_Rs)).argmin()
-    result_drudeRs = model_drude.fit(G[V_Rs_ind:], params_Rs, x=Vg[V_Rs_ind:])
+    if holes:
+        result_drudeRs = model_drude.fit(G[:V_Rs_ind], params_Rs, x=Vg[:V_Rs_ind])
+    else:
+        result_drudeRs = model_drude.fit(G[V_Rs_ind:], params_Rs, x=Vg[V_Rs_ind:])
     Rs = result_drudeRs.params['Rs'].value             ## This is THE value of Rs
     mu_Rs = result_drudeRs.params['mu'].value          # Meaningless value
 
-    Rs_fit = drude(Vg[V_Rs_ind:],Rs,mu_Rs,V0,L,c)
+    if holes:
+        Rs_fit = drude(Vg[:V_Rs_ind],Rs,mu_Rs,V0,L,c,holes)
+    else:
+        Rs_fit = drude(Vg[V_Rs_ind:],Rs,mu_Rs,V0,L,c)
     
     return Rs,Rs_fit,V_Rs_ind,result_drudeRs
 
-def perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,c):
+def perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,c,holes):
     params_drude = Parameters()
     params_drude.add('Rs',value=initial_Rs) #Allow to vary for the purpose of illustration.
     params_drude.add('mu',value=initial_mu)
     params_drude.add('Vth',value=Vth) #Can/should vary now.
     params_drude.add('L',value=L,vary=False)
     params_drude.add('c',value=c,vary=False)
+    params_drude.add('holes',value=holes,vary=False)
 
     # Perform the Drude fit over 'full' range. Which is still Vg>Vth
     Vth_ind=(np.abs(Vg - Vth)).argmin()
-    result_drude = model_drude.fit(G[Vth_ind:], params_drude, x=Vg[Vth_ind:])
+    if holes:
+        result_drude = model_drude.fit(G[:Vth_ind], params_drude, x=Vg[:Vth_ind])
+    else:
+        result_drude = model_drude.fit(G[Vth_ind:], params_drude, x=Vg[Vth_ind:])
     Rs_drude = result_drude.params['Rs'].value
     mu_drude = result_drude.params['mu'].value
     Vth_drude=result_drude.params['Vth'].value
     
-    drude_fit = drude(Vg[Vth_ind:],Rs_drude,mu_drude,Vth_drude,L,c)
+    if holes:
+        drude_fit = drude(Vg[:Vth_ind],Rs_drude,mu_drude,Vth_drude,L,c,holes)
+    else:
+        drude_fit = drude(Vg[Vth_ind:],Rs_drude,mu_drude,Vth_drude,L,c)
     
     return mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude
 
