@@ -61,6 +61,9 @@ class CreateToolTip(object):
             
 def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax,holes=False):
     
+    if holes:           #Flipping the data as if it was electrons means we can stick with good initial guesses no matter what
+        dGdVg=-dGdVg[::-1]
+
     minoptions=['Min','','min']
     if Vmin not in minoptions:
         Vmin=float(Vmin)
@@ -110,7 +113,8 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax,holes=False):
 
     infl_slope=deriv_fitfine.max()    #Slope in G(Vg) at the inflection point is simply the maximum of the derivative
     infl_ind=deriv_fitfine.argmax()   #Array index where inflection point occurs
-    if holes:
+    
+    if holes: #Since we flipped the derivative data earlier, we need to reverse everything.
         infl_slope=-infl_slope
         deriv_fit=-deriv_fit[::-1]
         Vg_infl=Vgfine[-infl_ind]             #Value of Vg at the inflection point
@@ -140,7 +144,7 @@ def drude(x, Rs,mu,Vth,L,c,holes=False):    # drude fit
         return 1/(Rs + L**2/(mu*c*(x-Vth)))
 model_drude = Model(drude)
 
-def perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,c,holes):
+def perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,c,holes=False):
     params_Rs = Parameters()
     params_Rs.add('Rs',value=initial_Rs)
     params_Rs.add('mu',value=initial_mu)
@@ -165,7 +169,7 @@ def perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,c,holes):
     
     return Rs,Rs_fit,V_Rs_ind,result_drudeRs
 
-def perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,c,holes):
+def perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,c,holes=False):
     params_drude = Parameters()
     params_drude.add('Rs',value=initial_Rs) #Allow to vary for the purpose of illustration.
     params_drude.add('mu',value=initial_mu)
@@ -191,7 +195,7 @@ def perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,c,holes):
     
     return mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude
 
-def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initial_mu,plotting=True):
+def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initial_mu,holes=False,plotting=True):
 
     datadict={}
     paramdict={}
@@ -210,7 +214,7 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
         dGdVg = np.gradient(G, Vg)
     datadict['dGdVg (S/V)']=dGdVg
 
-    V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin,Vmax=Vmax)
+    V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin,Vmax=Vmax,holes=holes)
     datadict['dGdVg fit (S/V)']=deriv_fit
     datadict['Inflection fit (S)']=inflectionline
     paramdict['V0 (V)']=V0
@@ -218,17 +222,21 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
     paramdict['Vg_infl (V)']=Vg_infl
     paramdict['V_Rs (V)']=V_Rs
         
-    Rs,Rs_fit,V_Rs_ind,result_drudeRs=perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,C)
+    Rs,Rs_fit,V_Rs_ind,result_drudeRs=perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,C,holes)
     paramdict['Rs (Ohm)']=Rs
     datadict['Vg for Rs fit (V)']=Vg[V_Rs_ind:]
     datadict['Rs fit (S)']=Rs_fit
     
-    density=CperA*(Vg-V0)/1.602176634e-19
-    mu_eff=L**2/(C*(Vg-V0)*((1/G)-Rs))
+    if holes:
+        density=CperA*(V0-Vg)/1.602176634e-19
+        mu_eff=L**2/(C*(V0-Vg)*((1/G)-Rs))
+    else:
+        density=CperA*(Vg-V0)/1.602176634e-19
+        mu_eff=L**2/(C*(Vg-V0)*((1/G)-Rs))
     datadict['density (1/m2)']=density
     datadict['mu_eff (m2/Vs)']=mu_eff
     
-    mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude=perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,C)
+    mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude=perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,C,holes)
     paramdict['mu_drude (m2/Vs)']=mu_drude
     paramdict['Rs_drude (Ohm)']=Rs_drude
     datadict['Vg for mu_FET fit (V)']=Vg[Vth_ind:]
@@ -237,8 +245,12 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
     if plotting==True:
         plt.plot(Vg,G,label='data')
         plt.plot(Vg,inflectionline,label='inflection')
-        plt.plot(Vg[V_Rs_ind:],Rs_fit,label='Rs fit')
-        plt.plot(Vg[Vth_ind:],drude_fit,label='drude fit')
+        if holes:
+            plt.plot(Vg[:V_Rs_ind],Rs_fit,label='Rs fit')
+            plt.plot(Vg[:Vth_ind],drude_fit,label='drude fit')
+        else:
+            plt.plot(Vg[V_Rs_ind:],Rs_fit,label='Rs fit')
+            plt.plot(Vg[Vth_ind:],drude_fit,label='drude fit')
         plt.xlabel('Vg (V)')
         plt.ylabel('Conductance (S)')
         plt.ylim([G.min()-(G.max()-G.min())/10,G.max()+(G.max()-G.min())/10])
@@ -253,8 +265,12 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
         
         mu_drude_array=np.full(Vg.shape[0],mu_drude)
         plotstart=(np.abs(Vg - (2*Vth-Vg_infl))).argmin()
-        plt.plot(density[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,label='mu_eff')
-        plt.plot(density[plotstart:]*1e-12/1e4,mu_drude_array[plotstart:]*1e4,label='mu_drude')
+        if holes:
+            plt.plot(density[:plotstart]*1e-12/1e4,mu_eff[:plotstart]*1e4,label='mu_eff')
+            plt.plot(density[:plotstart]*1e-12/1e4,mu_drude_array[:plotstart]*1e4,label='mu_drude')
+        else:
+            plt.plot(density[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,label='mu_eff')
+            plt.plot(density[plotstart:]*1e-12/1e4,mu_drude_array[plotstart:]*1e4,label='mu_drude')
         plt.xlabel('Carrier density x 10$^{12}$ (cm$^{-2}$)')
         plt.ylabel('Mobility (cm$^2$/(Vs))')
         plt.legend()

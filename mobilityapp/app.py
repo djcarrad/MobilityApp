@@ -274,20 +274,18 @@ def run():
             Gsmooth=savgol_filter(G, int(G.shape[0]*smoothing), 5, deriv=0, delta=1.0, axis=-1, mode='interp', cval=0.0)
             dGdVg = np.gradient(Gsmooth, Vg)
         else:
+            Gmooth=0
             dGdVg = np.gradient(G, Vg)
 
-        if holes:
-            dGdVg=-dGdVg[::-1]
-            
         exportdatadict['dGdVg (S/V)']=dGdVg
         set_exportdata()
             
         fig2.clf()
         ax[1]=fig2.add_subplot()
-        if holes:
-            ax[1].plot(Vg,-dGdVg[::-1]*1e3,'k',label='data')
-        else:
-            ax[1].plot(Vg,dGdVg*1e3,'k',label='data')
+        # if holes:
+        #     ax[1].plot(Vg,dGdVg*1e3,'k',label='data')
+        # else:
+        ax[1].plot(Vg,dGdVg*1e3,'k',label='data')
         ax[1].set_xlabel('Gate voltage (V)')
         ax[1].set_ylabel(f'$dG/dV_g$ (mS/V)')
         ax[1].legend()
@@ -295,8 +293,6 @@ def run():
         fig2.canvas.draw()
             
         # try:
-        if smoothing==0:
-            Gsmooth=0
         V0,Vth,Vg_infl,V_Rs,thresholdline,deriv_fit,result_deriv_fit=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin.get(),Vmax=Vmax.get(),holes=holes)
         paramdict['V0 (V)']=V0
         paramdict['Vth (V)']=Vth
