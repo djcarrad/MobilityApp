@@ -131,11 +131,11 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax,holes=False):
     
     V_Rs = Vg_infl+2*(Vg_infl-Vth)   #Vg above which we will use to calculate series resistance
     
-    thresholdline=infl_slope*Vg+G_intercept      #Draw a line tangential with the inflection point. Vg-intercept is Vth
+    inflectionline=infl_slope*Vg+G_intercept      #Draw a line tangential with the inflection point. Vg-intercept is Vth
 
     V0 = Vth-2*(Vg_infl-Vth)         #Vg for which density extrapolates to zero.
 
-    return V0,Vth,Vg_infl,V_Rs,thresholdline,deriv_fit,result
+    return V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result
 
 def drude(x, Rs,mu,Vth,L,c,holes=False):    # drude fit 
     if holes:
@@ -224,7 +224,10 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
         
     Rs,Rs_fit,V_Rs_ind,result_drudeRs=perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,C,holes)
     paramdict['Rs (Ohm)']=Rs
-    datadict['Vg for Rs fit (V)']=Vg[V_Rs_ind:]
+    if holes:
+        datadict['Vg for Rs fit (V)']=Vg[:V_Rs_ind]
+    else:
+        datadict['Vg for Rs fit (V)']=Vg[V_Rs_ind:]
     datadict['Rs fit (S)']=Rs_fit
     
     if holes:
@@ -239,7 +242,10 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
     mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude=perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,C,holes)
     paramdict['mu_drude (m2/Vs)']=mu_drude
     paramdict['Rs_drude (Ohm)']=Rs_drude
-    datadict['Vg for mu_FET fit (V)']=Vg[Vth_ind:]
+    if holes:
+        datadict['Vg for mu_FET fit (V)']=Vg[:Vth_ind]
+    else:
+        datadict['Vg for mu_FET fit (V)']=Vg[Vth_ind:]
     datadict['mu_FET fit (S)']=drude_fit
     
     if plotting==True:

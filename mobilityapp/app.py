@@ -292,7 +292,7 @@ def run():
         fig2.canvas.draw()
             
         # try:
-        V0,Vth,Vg_infl,V_Rs,thresholdline,deriv_fit,result_deriv_fit=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin.get(),Vmax=Vmax.get(),holes=holes)
+        V0,Vth,Vg_infl,V_Rs,infelctionline,deriv_fit,result_deriv_fit=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin.get(),Vmax=Vmax.get(),holes=holes)
         paramdict['V0 (V)']=V0
         paramdict['Vth (V)']=Vth
         paramdict['Vg_infl (V)']=Vg_infl
@@ -301,7 +301,7 @@ def run():
         set_exportparams()
         
         exportdatadict['dGdVg fit (S/V)']=deriv_fit
-        exportdatadict['Inflection fit (S)']=thresholdline
+        exportdatadict['Inflection fit (S)']=infelctionline
         set_exportdata()
         # if holes:
         #     ax[1].plot(Vg,-deriv_fit[::-1]*1e3,label='fit')
@@ -311,10 +311,10 @@ def run():
         fig2.canvas.draw()
         if GorI.get()=='G provided':
             if Gunits.get()=='2e2/h':
-                thresholdline=thresholdline/7.748091729e-5
+                infelctionline=infelctionline/7.748091729e-5
             elif Gunits.get()=='e2/h':
-                thresholdline=thresholdline/7.748091729e-5*2
-        ax[0].plot(Vg,thresholdline,label='slope at inflection')
+                infelctionline=infelctionline/7.748091729e-5*2
+        ax[0].plot(Vg,infelctionline,label='slope at inflection')
         ax[0].legend()
         fig1.canvas.draw()
         # except Exception as e:
