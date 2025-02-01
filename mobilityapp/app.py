@@ -122,7 +122,7 @@ def run():
     ## Enter parameters
     paramsframe = ttk.Frame(root, padding='3 3 12 12')
     paramsframe.grid(column=0,row=1,sticky=('N,W,E,S'))
-    Label(paramsframe,text='Enter geometrical properties of your device').grid(row=0,columnspan=3)
+    Label(paramsframe,text='4) Enter geometrical properties of your device',fg='green').grid(row=0,columnspan=3)
     Label(paramsframe,text='Enter intial guesses for series resistance and mobility').grid(row=4,columnspan=3)
     c=StringVar()
     c.set('5.3e-15')
@@ -169,12 +169,11 @@ def run():
                     'wrong values will not change the trend of mobility vs density.')
     CreateToolTip(initRs_entry,'Setting initial guesses sensibly can help fitting the series resistance properly.')
     CreateToolTip(initmu_entry,'Setting initial guesses sensibly can help fitting the series resistance properly.')
-    CreateToolTip(W_entry,'Calculating the density requires the capacitance per unit area, '
+    CreateToolTip(Cdropmenu,'Calculating the density requires the capacitance per unit area, '
                             'which for planar devices is simply C/(length*width). '
                             'However, nanowires and other irregularly shaped devices do not '
-                            'have a well-defined width. In this case, we need to know both '
-                            'the total device capacitance, and the capacitance per area from '
-                            'simulation/calculation.')
+                            'have a well-defined width. In this case, we instead need to know '
+                            'the capacitance per area as well as the total capcitance. ')
     for child in paramsframe.winfo_children():
         child.grid_configure(padx=2,pady=2)
         
@@ -213,7 +212,7 @@ def run():
     databottomframe=ttk.Frame(dataframe)
     databottomframe.grid(row=1)
     ax={}
-    figuresize=(4,2.5)
+    figuresize=(3.75,2.25)
     plt.rcParams.update({'font.size': 8})
     fig1 = Figure(figsize=figuresize, dpi=100)
     canvas1 = FigureCanvasTkAgg(fig1, master=databottomframe)  # A tk.DrawingArea.
@@ -427,7 +426,7 @@ def run():
     def clear_mobility():
         fig3.clf()
         fig3.canvas.draw()
-    Rsbutton=Button(mobtopframe, text='4) Find Rs and plot mu_eff/Refresh', command=plot_mobility,fg='green')
+    Rsbutton=Button(mobtopframe, text='5) Find Rs and plot mu_eff/Refresh', command=plot_mobility,fg='green')
     Rsbutton.grid(row=0)
     Button(mobtopframe, text='Clear plot', command=clear_mobility).grid(row=0,column=2)
     CreateToolTip(Rsbutton,'If the fit is not working well, and the fit in the first panel (orange line) seems '
@@ -501,8 +500,8 @@ def run():
                     writer.writerow(row)
         else:
             print('File type must be .json or .csv')
-    exportdatabutton=Button(exportframe, text='5) Export data', command=export_data, fg='green')
-    exportdatabutton.grid(row=0,column=0)
+    exportdatabutton=Button(exportframe, text='6) Export data', command=export_data, fg='green')
+    exportdatabutton.grid(row=0,column=0,stick='E')
     CreateToolTip(exportdatabutton,'Export data as json or csv. Reimporting a json to python with json.load() returns a dictionary')
     def copy_data():
         maxsize=1000
@@ -517,7 +516,7 @@ def run():
         root.clipboard_append(datacopy)
         np.set_printoptions(threshold=1000)
     copydatabutton=Button(exportframe, text='Copy data', command=copy_data)
-    copydatabutton.grid(row=0,column=1)
+    copydatabutton.grid(row=0,column=1,sticky='W')
     def export_params():
         filename = tk.filedialog.asksaveasfilename(title='Select file name and type.',
                                                 defaultextension='.json',filetypes=[('JSON (*.json)','*.json'),('Comma separated values (*.csv)','*.csv')])
@@ -529,7 +528,7 @@ def run():
                 writer = csv.writer(f)
                 for param in paramdict:
                     writer.writerow([param,paramdict[param]])
-    Button(exportframe, text='6) Export parameters', command=export_params, fg='green').grid(row=0,column=3)
+    Button(exportframe, text='7) Export parameters', command=export_params, fg='green').grid(row=0,column=3)
     def copy_params():
         root.clipboard_clear()
         paramcopy=''
