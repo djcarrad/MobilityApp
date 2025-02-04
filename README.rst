@@ -119,12 +119,14 @@ G: Conductance, in units of S, or the conductance quantum
 
 Vg: Gate voltage
 
+dG/dVg: Derivative of G with respect to Vg. In the app the derivative is performed numerically.
+
 V0: The gate voltage for which the electron density tends to zero in the Drude model, assuming a linear
-capacative coupling between the gate and FET channel
+capacative coupling between the gate and FET channel. V0 = Vth - 2*(Vg_infl - Vth)
 
 Vth: Threshold voltage. The gate voltage for which conductance tends to zero
 
-g_infl: Inflection voltage. The gate voltage at the inflection point in G(Vg)
+Vg_infl: The gate voltage at the inflection point in G(Vg); equivalently, the maxima of dG/dVg
 
 Rs: The series resistance. The total measured resistance minus the resistance of the device itself.
 The series resistance includes contact resistance and any resistance introduced by the external circuitry.

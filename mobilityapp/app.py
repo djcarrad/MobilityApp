@@ -402,7 +402,7 @@ def run():
     Label(derivextraframe,text='dG/dVg_infl').grid(column=4,row=0)
     dGdVg_inflman=StringVar()
     dGdVg_inflmanentry=Entry(derivextraframe,textvariable=dGdVg_inflman,width=5).grid(column=5,row=0)
-    Label(derivextraframe,text='(ms/V)').grid(column=6,row=0)
+    Label(derivextraframe,text='(mS/V)').grid(column=6,row=0)
     manualinflbutton=Button(derivextraframe,text='Enter',command=plot_manual_inflection)
     manualinflbutton.grid(column=7,row=0)
     
@@ -528,11 +528,11 @@ def run():
         
     drudebutton=Button(mobtopframe, text='Fit and plot mu_FET', command=plot_drude)
     drudebutton.grid(row=0,column=1)
-    exporterrorframe=ttk.Frame(root, padding='3 3 12 3')
-    exporterrorframe.grid(column=2,row=1)
+
+
     ### Export frame, including scrollable windows of the produced data and parameters
-    exportframe = ttk.Frame(exporterrorframe, padding='3 3 12 3')
-    exportframe.grid(column=0,row=0)
+    exportframe = ttk.Frame(root, padding='3 25 12 3')
+    exportframe.grid(column=2,row=1,sticky='N')
     def export_data():
         jsonexportdata={}
         for param in exportdatadict:
@@ -557,7 +557,7 @@ def run():
         else:
             print('File type must be .json or .csv')
     exportdatabutton=Button(exportframe, text='6) Export data', command=export_data, fg='green')
-    exportdatabutton.grid(row=0,column=0,stick='E')
+    exportdatabutton.grid(row=0,column=0,sticky='E')
     CreateToolTip(exportdatabutton,'Export data as json or csv. Reimporting a json to python with json.load() returns a dictionary')
     def copy_data():
         maxsize=1000
@@ -592,7 +592,7 @@ def run():
             paramcopy+=param+': '+str(paramdict[param])+'\n'
         root.clipboard_append(str(paramcopy))
     Button(exportframe, text='Copy params', command=copy_params).grid(row=0,column=4,columnspan=2)
-    databox=Listbox(exportframe,listvariable=(exportdatavar),height=11,width=35)
+    databox=Listbox(exportframe,listvariable=(exportdatavar),height=11,width=38)
     databox.grid(column=0,row=1,columnspan=2,sticky=('N W E S'))
     s1 = ttk.Scrollbar(exportframe, orient=VERTICAL, command=databox.yview)
     s1.grid(column=2,row=1,sticky=('N S'))
@@ -608,14 +608,5 @@ def run():
     s3 = ttk.Scrollbar(exportframe, orient=HORIZONTAL, command=parambox.xview)
     s3.grid(column=3,row=2,columnspan=2,sticky=('W E'))
     parambox['xscrollcommand'] = s3.set
-    # errorframe= ttk.Frame(exporterrorframe, padding='3 3 12 12')
-    # errorframe.grid(column=0,row=1)
-    # errorbox=Text(errorframe,height=6,width=50)
-    # errorbox.grid(column=0,row=0,sticky=('N W E S'))
-    # s4=ttk.Scrollbar(errorframe,orient=VERTICAL,command=errorbox.yview)
-    # s4.grid(column=1,row=0,sticky=('N S'))
-    # errorbox['yscrollcommand']=s4.set
-    # s5=ttk.Scrollbar(errorframe,orient=HORIZONTAL,command=errorbox.xview)
-    # s5.grid(column=0,row=1,sticky=('W E'))
-    # errorbox['xscrollcommand']=s5.set
+
     root.mainloop()
