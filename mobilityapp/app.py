@@ -17,7 +17,7 @@ from .supportfunctions import *
 
 def run():
     root = Tk()
-    root.title('Calculate mobility from two terminal data')
+    root.title('MobilityApp: Calculate mobility and density from two-terminal FET data')
     ## Pick the datafile
     dataframe = ttk.Frame(root, padding='3 3 12 12')
     dataframe.grid(column=0,row=0,sticky='N')
