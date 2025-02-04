@@ -4,7 +4,7 @@ Python-based tool to analyse conductance vs gate voltage data and extract mobili
 
 See below for background and instructions on use.
 
-Questions/assistance: Damon Carrad, damonc@dtu.dk
+Questions/assistance: Damon Carrad, damonc@dtu.dk or Christian Petersen cenpe@dtu.dk
 
 
 Installation:
