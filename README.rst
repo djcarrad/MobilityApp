@@ -65,9 +65,7 @@ The GUI can be run from Anaconda Prompt with:
 
 Using the app:
 ===================================
-The best tutorial for using the app/code is the paper itself, especially the instruction box.
-The second best tutorial is to hover the mouse over the different elements of the app, and you
-may receive helpful hints.
+This application provides access to the methods described in this paper: EVENTUAL LINK
 
 In short; for any FET-like device, conductance vs gate voltage data can be transformed into 
 mobility vs density data, assuming that scattering at low density is dominated by random impurities.
@@ -114,3 +112,34 @@ and troubleshooting. The notebook also allows you access to the full lmfit fit r
 fits, if uncertainty reporting and processing is necessary. I hope the example notebook contains
 enough comments to make usage clear enough, otherwise please reach out to us, damonc@dtu.dk or 
 cenpe@dtu.dk
+
+Definitions
+=====================================
+G: Conductance, in units of S, or the conductance quantum
+
+Vg: Gate voltage
+
+V0: The gate voltage for which the electron density tends to zero in the Drude model, assuming a linear
+capacative coupling between the gate and FET channel
+
+Vth: Threshold voltage. The gate voltage for which conductance tends to zero
+
+g_infl: Inflection voltage. The gate voltage at the inflection point in G(Vg)
+
+Rs: The series resistance. The total measured resistance minus the resistance of the device itself.
+The series resistance includes contact resistance and any resistance introduced by the external circuitry.
+
+Capacitance, C: The capcitance between the gate and the channel. Usually calculated or simulated.
+
+Length/width: Dimensions of the device, underneath the gate (i.e. excluding any un-gated region)
+
+Cap per area: Capacitance per area
+
+density: calculated as Cperarea*(Vg-V0)/e where e is electron charge.
+
+mu_eff: The effective mobility. Calculated as mu_eff=length^2/(C*(Vg-V0)*((1/G)-Rs)). If found correctly,
+the effective mobility is identical to the Hall mobility in the single-carrier limit.
+
+mu_FET: Field effect mobility found by fitting 1/G = Rs + length^2/(mu_FET*C*(Vg-Vth)). The field effect 
+mobility may approximate the Hall/effective mobility for a small range of density, but is in general a 
+less accurate and less quantitative measure of material quality.

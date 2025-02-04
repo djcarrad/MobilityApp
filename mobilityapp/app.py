@@ -496,8 +496,8 @@ def run():
                                                         float(initial_Rs.get()),float(initial_mu.get())*1e-4,
                                                         float(L.get()),float(c.get()),holes)
         
-        paramdict['mu_drude (m2/Vs)']=mu_drude
-        paramdict['Rs_drude (Ohm)']=Rs_drude           
+        paramdict['mu_FET (m2/Vs)']=mu_drude
+        #paramdict['Rs_drude (Ohm)']=Rs_drude           
         set_exportparams()
         
         if holes:
@@ -592,7 +592,7 @@ def run():
             paramcopy+=param+': '+str(paramdict[param])+'\n'
         root.clipboard_append(str(paramcopy))
     Button(exportframe, text='Copy params', command=copy_params).grid(row=0,column=4,columnspan=2)
-    databox=Listbox(exportframe,listvariable=(exportdatavar),height=12,width=35)
+    databox=Listbox(exportframe,listvariable=(exportdatavar),height=11,width=35)
     databox.grid(column=0,row=1,columnspan=2,sticky=('N W E S'))
     s1 = ttk.Scrollbar(exportframe, orient=VERTICAL, command=databox.yview)
     s1.grid(column=2,row=1,sticky=('N S'))
@@ -600,7 +600,7 @@ def run():
     s2 = ttk.Scrollbar(exportframe, orient=HORIZONTAL, command=databox.xview)
     s2.grid(column=0,row=2,columnspan=2,sticky=('W E'))
     databox['xscrollcommand'] = s2.set
-    parambox=Listbox(exportframe,listvariable=(exportparamsvar),height=12,width=30)
+    parambox=Listbox(exportframe,listvariable=(exportparamsvar),height=11,width=30)
     parambox.grid(column=3,row=1,columnspan=2,sticky=('N W E S'))
     s3 = ttk.Scrollbar(exportframe, orient=VERTICAL, command=parambox.yview)
     s3.grid(column=5,row=1,sticky=('N S'))

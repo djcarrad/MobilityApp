@@ -258,8 +258,8 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
     datadict['mu_eff (m2/Vs)']=mu_eff
     
     mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude=perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,C,holes)
-    paramdict['mu_drude (m2/Vs)']=mu_drude
-    paramdict['Rs_drude (Ohm)']=Rs_drude
+    paramdict['mu_FET (m2/Vs)']=mu_drude
+    #paramdict['Rs_drude (Ohm)']=Rs_drude
     if holes:
         datadict['Vg for mu_FET fit (V)']=Vg[:Vth_ind]
     else:
