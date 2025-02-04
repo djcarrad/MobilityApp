@@ -97,7 +97,8 @@ derivative of most G(V_g) data we have tried. The important point is that only t
 coordinates are relevant! Therefore, it doesn't matter too much if the fit is poor at other Vg; as 
 long as the fitting procedure finds the co-ordinates accurately, it's all good. But please check it's 
 done a good job!! If it hasn't done a good job, play with the parameters until it does. If you really
-give up, but it's super obvious where the peak is, you just just write the values manually below the plot.
+give up, but it's super obvious where the peak is (the human eye is a really good fitting tool), 
+just write the values manually below the plot.
 
 Exported data
 ------------------------------------

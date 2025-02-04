@@ -121,7 +121,7 @@ def run():
 
         
     ## Enter parameters
-    paramsframe = ttk.Frame(root, padding='3 3 12 12')
+    paramsframe = ttk.Frame(root, padding='3 3 12 3')
     paramsframe.grid(column=0,row=1,sticky=('N,W,E,S'))
     Label(paramsframe,text='4) Enter geometrical properties of your device',fg='green').grid(row=0,columnspan=3)
     Label(paramsframe,text='Enter intial guesses for series resistance and mobility').grid(row=4,columnspan=3)
@@ -206,7 +206,7 @@ def run():
         
         
     ## Window to plot the loaded data
-    dataframe = ttk.Frame(root, padding='3 3 12 12')
+    dataframe = ttk.Frame(root, padding='3 3 12 3')
     dataframe.grid(column=1,row=0,sticky='N')
     datatopframe = ttk.Frame(dataframe)
     datatopframe.grid(row=0)
@@ -253,7 +253,7 @@ def run():
     
     
     ## Window to plot the derivlorentzian fit
-    derivframe = ttk.Frame(root, padding='3 3 12 12')
+    derivframe = ttk.Frame(root, padding='3 3 12 3')
     derivframe.grid(column=2,row=0)
     derivtopframe = ttk.Frame(derivframe)
     derivtopframe.grid(row=0)
@@ -409,7 +409,7 @@ def run():
     
     
     ## Window to plot final mobility vs density plot
-    mobframe = ttk.Frame(root, padding='3 3 12 12')
+    mobframe = ttk.Frame(root, padding='3 3 12 3')
     mobframe.grid(column=1,row=1)
     mobtopframe = ttk.Frame(mobframe)
     mobtopframe.grid(row=0)
@@ -528,10 +528,10 @@ def run():
         
     drudebutton=Button(mobtopframe, text='Fit and plot mu_FET', command=plot_drude)
     drudebutton.grid(row=0,column=1)
-    exporterrorframe=ttk.Frame(root, padding='3 3 12 12')
+    exporterrorframe=ttk.Frame(root, padding='3 3 12 3')
     exporterrorframe.grid(column=2,row=1)
     ### Export frame, including scrollable windows of the produced data and parameters
-    exportframe = ttk.Frame(exporterrorframe, padding='3 3 12 12')
+    exportframe = ttk.Frame(exporterrorframe, padding='3 3 12 3')
     exportframe.grid(column=0,row=0)
     def export_data():
         jsonexportdata={}
