@@ -20,7 +20,7 @@ def run():
     root.title('Calculate mobility from two terminal data')
     ## Pick the datafile
     dataframe = ttk.Frame(root, padding='3 3 12 12')
-    dataframe.grid(column=0,row=0)
+    dataframe.grid(column=0,row=0,sticky='N')
     data={}       #Dictionaries to store data and parameters both loaded and created since tkinter cannot read function returns
     paramdict={}
     exportdatadict={}
@@ -76,7 +76,8 @@ def run():
     loadbutton = Button(loadframe, text='1) Select data file', fg='green', command=load_data)
     loadbutton.grid(row=1)
     loadtt=CreateToolTip(loadbutton,'The data is loaded by numpy.loadtxt. It assumes at least two columns, one for '
-                        'Vg and one for G (or I). More columns are OK, simply type in the correct columns below.')
+                        'Vg and one for G (or I). More columns are OK, simply choose correct columns below. '
+                        'If you have a more esoteric datatype, e.g. database, please reshape it and save as csv-like.')
     loadedfileentry=Entry(loadframe,textvariable=loadedfile,width=45)
     loadedfileentry.config(state='disabled')
     loadedfileentry.grid(row=2)
@@ -166,7 +167,7 @@ def run():
     initmu_entry.grid(row=6,column=1)
     ctt=CreateToolTip(c_entry,'It is important to have an accurate calculation/simulation of the '
                     'capacitance to obtain the proper absolute value of mobility. However, '
-                    'wrong values will not change the trend of mobility vs density.')
+                    'a wrong value will not change the trend of mobility vs density, just the absolute value.')
     CreateToolTip(initRs_entry,'Setting initial guesses sensibly can help fitting the series resistance properly.')
     CreateToolTip(initmu_entry,'Setting initial guesses sensibly can help fitting the series resistance properly.')
     CreateToolTip(Cdropmenu,'Calculating the density requires the capacitance per unit area, '
@@ -206,7 +207,7 @@ def run():
         
     ## Window to plot the loaded data
     dataframe = ttk.Frame(root, padding='3 3 12 12')
-    dataframe.grid(column=1,row=0)
+    dataframe.grid(column=1,row=0,sticky='N')
     datatopframe = ttk.Frame(dataframe)
     datatopframe.grid(row=0)
     databottomframe=ttk.Frame(dataframe)
@@ -248,6 +249,9 @@ def run():
         
     plotdatabutton = Button(datatopframe, text='2) Plot data/Refresh', command=plot_data,fg='green').grid(row=0)
     clearplotbutton = Button(datatopframe, text='Clear plot', command=clear_plot).grid(row=0,column=2)
+    
+    
+    
     ## Window to plot the derivlorentzian fit
     derivframe = ttk.Frame(root, padding='3 3 12 12')
     derivframe.grid(column=2,row=0)
@@ -255,6 +259,9 @@ def run():
     derivtopframe.grid(row=0)
     derivbottomframe=ttk.Frame(derivframe)
     derivbottomframe.grid(row=1)
+    derivextraframe=ttk.Frame(derivframe)
+    derivextraframe.grid(row=2)
+
     fig2 = Figure(figsize=tuple((4.5,figuresize[1])), dpi=100)
     canvas2 = FigureCanvasTkAgg(fig2, master=derivbottomframe)  # A tk.DrawingArea.
     canvas2.draw()
@@ -273,7 +280,7 @@ def run():
             Gsmooth=savgol_filter(G, int(G.shape[0]*smoothing), 5, deriv=0, delta=1.0, axis=-1, mode='interp', cval=0.0)
             dGdVg = np.gradient(Gsmooth, Vg)
         else:
-            Gmooth=0
+            Gsmooth=0
             dGdVg = np.gradient(G, Vg)
 
         exportdatadict['dGdVg (S/V)']=dGdVg
@@ -292,7 +299,7 @@ def run():
         fig2.canvas.draw()
             
         # try:
-        V0,Vth,Vg_infl,V_Rs,infelctionline,deriv_fit,result_deriv_fit=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin.get(),Vmax=Vmax.get(),holes=holes)
+        V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin.get(),Vmax=Vmax.get(),holes=holes)
         paramdict['V0 (V)']=V0
         paramdict['Vth (V)']=Vth
         paramdict['Vg_infl (V)']=Vg_infl
@@ -301,7 +308,7 @@ def run():
         set_exportparams()
         
         exportdatadict['dGdVg fit (S/V)']=deriv_fit
-        exportdatadict['Inflection fit (S)']=infelctionline
+        exportdatadict['Inflection fit (S)']=inflectionline
         set_exportdata()
         # if holes:
         #     ax[1].plot(Vg,-deriv_fit[::-1]*1e3,label='fit')
@@ -311,10 +318,10 @@ def run():
         fig2.canvas.draw()
         if GorI.get()=='G provided':
             if Gunits.get()=='2e2/h':
-                infelctionline=infelctionline/7.748091729e-5
+                inflectionline=inflectionline/7.748091729e-5
             elif Gunits.get()=='e2/h':
-                infelctionline=infelctionline/7.748091729e-5*2
-        ax[0].plot(Vg,infelctionline,label='slope at inflection')
+                inflectionline=inflectionline/7.748091729e-5*2
+        ax[0].plot(Vg,inflectionline,label='slope at inflection')
         ax[0].legend()
         fig1.canvas.draw()
         # except Exception as e:
@@ -332,11 +339,12 @@ def run():
     plotderivbutton.grid(row=0)
     clearderivbutton = Button(derivtopframe, text='Clear plot', command=clear_deriv)
     clearderivbutton.grid(row=0,column=10)
-    plotderivtt=CreateToolTip(plotderivbutton,'Fit on the derivative of G(Vg). '
+    CreateToolTip(plotderivbutton,'Fit on the derivative of G(Vg). '
                             'The aim is to find the maximum of dG/dVg, which is the inflection point in G(Vg). '
                             'The fit can easily fail, but do not give up! Make sure units are correctly selected. '
                             'Try different amount of smoothing,  '
-                            'and limiting the Vg range which the fit is performed over')
+                            'and limiting the Vg range which the fit is performed over. '
+                            'If you have to give up, you can enter the peak coordinates manually below.')
     smoothingbut=StringVar()
     smoothingbut.set('0')
     Label(derivtopframe, text='Smoothing').grid(row=0,column=1,sticky='E')
@@ -352,6 +360,54 @@ def run():
     Label(derivtopframe, text='Vmax').grid(row=0,column=7,sticky='E')
     Vmax_entry=Entry(derivtopframe,textvariable=Vmax,width=6).grid(row=0,column=8)
     Label(derivtopframe, text='V').grid(row=0,column=9,sticky='W')
+    
+    def plot_manual_inflection():
+        Vg,G,holes=VgandG(convertunits=True)
+        
+        #Range over which to smooth, as a percentage of the data range
+        smoothing=float(smoothingbut.get())/100
+        
+        if smoothing!=0:
+            Gsmooth=savgol_filter(G, int(G.shape[0]*smoothing), 5, deriv=0, delta=1.0, axis=-1, mode='interp', cval=0.0)
+        else:
+            Gsmooth=0
+
+        V0,Vth,V_Rs,inflectionline=manual_inflection(Vg,G,Gsmooth,smoothing,
+                                                    float(Vg_inflman.get()),float(dGdVg_inflman.get())*1e-3)
+
+        paramdict['V0 (V)']=V0
+        paramdict['Vth (V)']=Vth
+        paramdict['Vg_infl (V)']=float(Vg_inflman.get())
+        paramdict['V_Rs (V)']=V_Rs
+                                
+        set_exportparams()
+
+        exportdatadict['Inflection fit (S)']=inflectionline
+        set_exportdata()
+
+        if GorI.get()=='G provided':
+            if Gunits.get()=='2e2/h':
+                inflectionline=inflectionline/7.748091729e-5
+            elif Gunits.get()=='e2/h':
+                inflectionline=inflectionline/7.748091729e-5*2
+        ax[0].plot(Vg,inflectionline,label='slope at inflection')
+        ax[0].legend()
+        fig1.canvas.draw()
+
+    Label(derivextraframe,text='Enter peak position manually:').grid(column=0,row=0)
+    Label(derivextraframe,text='Vg_infl').grid(column=1,row=0)
+    Vg_inflman=StringVar()
+    Vg_inflmanentry=Entry(derivextraframe,textvariable=Vg_inflman,width=5).grid(column=2,row=0)
+    Label(derivextraframe,text='V').grid(column=3,row=0)
+    Label(derivextraframe,text='dG/dVg_infl').grid(column=4,row=0)
+    dGdVg_inflman=StringVar()
+    dGdVg_inflmanentry=Entry(derivextraframe,textvariable=dGdVg_inflman,width=5).grid(column=5,row=0)
+    Label(derivextraframe,text='(ms/V)').grid(column=6,row=0)
+    manualinflbutton=Button(derivextraframe,text='Enter',command=plot_manual_inflection)
+    manualinflbutton.grid(column=7,row=0)
+    
+    
+    
     ## Window to plot final mobility vs density plot
     mobframe = ttk.Frame(root, padding='3 3 12 12')
     mobframe.grid(column=1,row=1)

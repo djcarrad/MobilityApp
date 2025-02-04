@@ -144,6 +144,24 @@ def drude(x, Rs,mu,Vth,L,c,holes=False):    # drude fit
         return 1/(Rs + L**2/(mu*c*(x-Vth)))
 model_drude = Model(drude)
 
+def manual_inflection(Vg,G,Gsmooth,smoothing,Vg_infl,infl_slope):
+    if smoothing !=0:
+        G_infl=np.interp(Vg_infl, Vg, Gsmooth)#Gsmooth[infl_ind]
+    else:
+        G_infl=np.interp(Vg_infl, Vg, G)#G[infl_ind]  #Value of G at the inflection point
+
+    G_intercept = G_infl-infl_slope*Vg_infl  #Finding 'threshold' voltage
+    Vth=-G_intercept/infl_slope
+    
+    V_Rs = Vg_infl+2*(Vg_infl-Vth)   #Vg above which we will use to calculate series resistance
+    
+    inflectionline=infl_slope*Vg+G_intercept      #Draw a line tangential with the inflection point. Vg-intercept is Vth
+
+    V0 = Vth-2*(Vg_infl-Vth)         #Vg for which density extrapolates to zero.
+
+    return V0,Vth,V_Rs,inflectionline
+
+
 def perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,c,holes=False):
     params_Rs = Parameters()
     params_Rs.add('Rs',value=initial_Rs)
