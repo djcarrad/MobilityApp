@@ -137,13 +137,6 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax,holes=False):
 
     return V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result
 
-def drude(x, Rs,mu,Vth,L,c,holes=False):    # drude fit 
-    if holes:
-        return 1/(Rs + L**2/(mu*c*(Vth-x)))
-    else:
-        return 1/(Rs + L**2/(mu*c*(x-Vth)))
-model_drude = Model(drude)
-
 def manual_inflection(Vg,G,Gsmooth,smoothing,Vg_infl,infl_slope):
     if smoothing !=0:
         G_infl=np.interp(Vg_infl, Vg, Gsmooth)#Gsmooth[infl_ind]
@@ -161,6 +154,12 @@ def manual_inflection(Vg,G,Gsmooth,smoothing,Vg_infl,infl_slope):
 
     return V0,Vth,V_Rs,inflectionline
 
+def drude(x, Rs,mu,Vth,L,c,holes=False):    # drude fit 
+    if holes:
+        return 1/(Rs + L**2/(mu*c*(Vth-x)))
+    else:
+        return 1/(Rs + L**2/(mu*c*(x-Vth)))
+model_drude = Model(drude)
 
 def perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,c,holes=False):
     params_Rs = Parameters()
