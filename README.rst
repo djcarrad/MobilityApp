@@ -112,4 +112,5 @@ Using the python code
 The main advantages of using the jupyter notebook code are batch processing large numbers of datasets,
 and troubleshooting. The notebook also allows you access to the full lmfit fit reports for each of the
 fits, if uncertainty reporting and processing is necessary. I hope the example notebook contains
-enough comments to make usage clear enough, otherwise please reach out to me, damonc@dtu.dk.
+enough comments to make usage clear enough, otherwise please reach out to us, damonc@dtu.dk or 
+cenpe@dtu.dk
