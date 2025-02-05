@@ -186,9 +186,9 @@ def perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,c,holes=False):
     
     return Rs,Rs_fit,V_Rs_ind,result_drudeRs
 
-def perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,c,holes=False,varyRs=True):
+def perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,c,holes=False,findRs=True):
     params_drude = Parameters()
-    params_drude.add('Rs',value=initial_Rs,vary=varyRs) #Allow to vary for the purpose of illustration.
+    params_drude.add('Rs',value=initial_Rs,vary=findRs) #Allow to vary for the purpose of illustration.
     params_drude.add('mu',value=initial_mu)
     params_drude.add('Vth',value=Vth) #Can/should vary now.
     params_drude.add('L',value=L,vary=False)
@@ -212,7 +212,8 @@ def perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,c,holes=False,varyRs=True
     
     return mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude
 
-def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initial_mu,holes=False,plotting=True):
+def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initial_mu,
+                             holes=False,plotting=True,findRs=True):
 
     datadict={}
     paramdict={}
@@ -231,7 +232,10 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
         dGdVg = np.gradient(G, Vg)
     datadict['dGdVg (S/V)']=dGdVg
 
-    V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin,Vmax=Vmax,holes=holes)
+    V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit=perform_deriv_fit(Vg,G,
+                                                                                    dGdVg,Gsmooth,smoothing,
+                                                                                    Vmin=Vmin,Vmax=Vmax,
+                                                                                    holes=holes)
     datadict['dGdVg fit (S/V)']=deriv_fit
     datadict['Inflection fit (S)']=inflectionline
     paramdict['V0 (V)']=V0
@@ -239,13 +243,18 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
     paramdict['Vg_infl (V)']=Vg_infl
     paramdict['V_Rs (V)']=V_Rs
         
-    Rs,Rs_fit,V_Rs_ind,result_drudeRs=perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,C,holes)
-    paramdict['Rs (Ohm)']=Rs
-    if holes:
-        datadict['Vg for Rs fit (V)']=Vg[:V_Rs_ind]
+    if findRs==False:
+        Rs=initial_Rs
+    elif findRs==True:
+        Rs,Rs_fit,V_Rs_ind,result_drudeRs=perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,C,holes)
+        if holes:
+            datadict['Vg for Rs fit (V)']=Vg[:V_Rs_ind]
+        else:
+            datadict['Vg for Rs fit (V)']=Vg[V_Rs_ind:]
+        datadict['Rs fit (S)']=Rs_fit
     else:
-        datadict['Vg for Rs fit (V)']=Vg[V_Rs_ind:]
-    datadict['Rs fit (S)']=Rs_fit
+        raise ValueError('findRs must be True or False')
+    paramdict['Rs (Ohm)']=Rs
     
     if holes:
         density=CperA*(V0-Vg)/1.602176634e-19
@@ -255,8 +264,10 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
         mu_eff=L**2/(C*(Vg-V0)*((1/G)-Rs))
     datadict['density (1/m2)']=density
     datadict['mu_eff (m2/Vs)']=mu_eff
-    
-    mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude=perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,C,holes)
+
+    mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude=perform_drude_fit(Vg,G,Vth,
+                                                                       initial_Rs,initial_mu,
+                                                                       L,C,holes,findRs)
     paramdict['mu_FET (m2/Vs)']=mu_drude
     #paramdict['Rs_drude (Ohm)']=Rs_drude
     if holes:
@@ -269,10 +280,12 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
         plt.plot(Vg,G,label='data')
         plt.plot(Vg,inflectionline,label='inflection')
         if holes:
-            plt.plot(Vg[:V_Rs_ind],Rs_fit,label='Rs fit')
+            if findRs==True:
+                plt.plot(Vg[:V_Rs_ind],Rs_fit,label='Rs fit')
             plt.plot(Vg[:Vth_ind],drude_fit,label='drude fit')
         else:
-            plt.plot(Vg[V_Rs_ind:],Rs_fit,label='Rs fit')
+            if findRs==True:
+                plt.plot(Vg[V_Rs_ind:],Rs_fit,label='Rs fit')
             plt.plot(Vg[Vth_ind:],drude_fit,label='drude fit')
         plt.xlabel('Vg (V)')
         plt.ylabel('Conductance (S)')

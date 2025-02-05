@@ -67,12 +67,12 @@ Using the app:
 ===================================
 This application provides access to the methods described in this paper: EVENTUAL LINK
 
-In short; for any FET-like device, conductance vs gate voltage data can be transformed into 
+In short; for any FET-like device, conductance, G, vs gate voltage, Vg, data can be transformed into 
 mobility vs density data, assuming that scattering at low density is dominated by random impurities.
-The key is to find V_0, the gate voltage at which the density tends towards zero; this process is at
-the core of the app/code. In general, we do it by taking the derivative of G(V_g), finding the peak
-co-ordinates, and using this information to extrapolate to an approximate V_0. We then fit G(V_g) at
-large V_g to find the series resistance in the circuit. Finally, you, the user need to input the 
+The key is to find V0, the gate voltage at which the density tends towards zero; this process is at
+the core of the app/code. In general, we do it by taking the derivative of G(Vg), finding the peak
+co-ordinates, and using this information to extrapolate to an approximate V0. We then fit G(Vg) at
+large Vg to find the series resistance in the circuit. Finally, you, the user need to input the 
 geometric properties of the device, and the app will return mobility and density.
 
 Loading data

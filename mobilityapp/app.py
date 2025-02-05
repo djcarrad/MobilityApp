@@ -506,13 +506,13 @@ def run():
         
         Vg,G,holes=VgandG(convertunits=True)
 
-        varyRs={'Fixed Rs':False,
+        findRs={'Fixed Rs':False,
                 'Initial Rs':True}
             
         mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude=perform_drude_fit(Vg,G,
                                                         paramdict['Vth (V)'],
                                                         float(initial_Rs.get()),float(initial_mu.get())*1e-4,
-                                                        float(L.get()),float(c.get()),holes,varyRs[Rs_initorfix.get()])
+                                                        float(L.get()),float(c.get()),holes,findRs[Rs_initorfix.get()])
         
         paramdict['mu_FET (m2/Vs)']=mu_drude
         #paramdict['Rs_drude (Ohm)']=Rs_drude           
