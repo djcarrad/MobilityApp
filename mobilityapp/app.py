@@ -124,7 +124,8 @@ def run():
     paramsframe = ttk.Frame(root, padding='3 3 12 3')
     paramsframe.grid(column=0,row=1,sticky=('N,W,E,S'))
     Label(paramsframe,text='4) Enter geometrical properties of your device',fg='green').grid(row=0,columnspan=3)
-    Label(paramsframe,text='Enter intial guesses for series resistance and mobility').grid(row=4,columnspan=3)
+    guesslabel=Label(paramsframe,text='Enter intial guesses for series resistance and mobility')
+    guesslabel.grid(row=4,columnspan=3)
     c=StringVar()
     c.set('5.3e-15')
     L=StringVar()
@@ -133,6 +134,8 @@ def run():
     W.set('280e-9')
     initial_Rs=StringVar()
     initial_Rs.set('10000')
+    Rs_initorfix=StringVar()
+    Rs_initorfix.set('Initial Rs')
     initial_mu=StringVar()
     initial_mu.set('4000')
     def update_params(*args):
@@ -148,8 +151,10 @@ def run():
     Cdropmenu=OptionMenu(paramsframe,Ctype,*['Width','Cap per area'])
     Cdropmenu.grid(row=3,sticky='E')
     #Label(paramsframe, text='Width').grid(row=3,sticky='E')
-    Label(paramsframe, text='Initial R_s').grid(row=5,sticky='E')
-    Label(paramsframe, text='Initial mu').grid(row=6,sticky='E')
+    Rsdropmenu=OptionMenu(paramsframe,Rs_initorfix,*['Initial Rs','Fixed Rs'])
+    Rsdropmenu.grid(row=5,sticky='E')
+    initmulabel=Label(paramsframe, text='Initial mu')
+    initmulabel.grid(row=6,sticky='E')
     Label(paramsframe, text='(F)').grid(row=1,column=2,sticky='W')
     Label(paramsframe, text='(m)').grid(row=2,column=2,sticky='W')
     Wunits=Label(paramsframe, text='(m)')
@@ -168,13 +173,18 @@ def run():
     ctt=CreateToolTip(c_entry,'It is important to have an accurate calculation/simulation of the '
                     'capacitance to obtain the proper absolute value of mobility. However, '
                     'a wrong value will not change the trend of mobility vs density, just the absolute value.')
-    CreateToolTip(initRs_entry,'Setting initial guesses sensibly can help fitting the series resistance properly.')
-    CreateToolTip(initmu_entry,'Setting initial guesses sensibly can help fitting the series resistance properly.')
+    guesstext='Setting initial guesses sensibly can help fitting the series resistance properly.'
+    CreateToolTip(guesslabel,guesstext)
+    CreateToolTip(initRs_entry,guesstext)
+    CreateToolTip(initmu_entry,guesstext)
+    CreateToolTip(initmulabel,guesstext)
     CreateToolTip(Cdropmenu,'Calculating the density requires the capacitance per unit area, '
                             'which for planar devices is simply C/(length*width). '
                             'However, nanowires and other irregularly shaped devices do not '
                             'have a well-defined width. In this case, we instead need to know '
                             'the capacitance per area as well as the total capcitance. ')
+    CreateToolTip(Rsdropmenu,'If you know Rs with high certainty from independent measurements, you may '
+                        'choose to fix it, rather than providing an inital value for fitting.')
     for child in paramsframe.winfo_children():
         child.grid_configure(padx=2,pady=2)
         
@@ -426,21 +436,35 @@ def run():
         fig3.clf()
         
         Vg,G,holes=VgandG(convertunits=True)
-            
-        Rs,Rs_fit,V_Rs_ind,result_drudeRs=perform_Rs_fit(Vg,G,
+        
+        if Rs_initorfix.get()=='Fixed Rs':
+            Rs=float(initial_Rs.get())
+
+        else:
+            Rs,Rs_fit,V_Rs_ind,result_drudeRs=perform_Rs_fit(Vg,G,
                                                         paramdict['V0 (V)'],paramdict['V_Rs (V)'],
                                                         float(initial_Rs.get()),float(initial_mu.get())*1e-4,
                                                         float(L.get()),float(c.get()),holes)
+
+            if holes:
+                exportdatadict['Vg for Rs fit (V)']=Vg[:V_Rs_ind]
+            else:
+                exportdatadict['Vg for Rs fit (V)']=Vg[V_Rs_ind:]
+            exportdatadict['Rs fit (S)']=Rs_fit
+
+            if GorI.get()=='G provided':
+                if Gunits.get()=='2e2/h':
+                    Rs_fit=Rs_fit/7.748091729e-5
+                elif Gunits.get()=='e2/h':
+                    Rs_fit=Rs_fit/7.748091729e-5*2
+            
+            ax[0].plot(exportdatadict['Vg for Rs fit (V)'],Rs_fit,label='fit for R_s')
+            ax[0].legend()
+            fig1.canvas.draw()
         
         paramdict['Rs (Ohm)']=Rs             
         set_exportparams()
-        
-        if holes:
-            exportdatadict['Vg for Rs fit (V)']=Vg[:V_Rs_ind]
-        else:
-            exportdatadict['Vg for Rs fit (V)']=Vg[V_Rs_ind:]
-        exportdatadict['Rs fit (S)']=Rs_fit
-        
+
         if Ctype.get()=='Width':
             Cperarea=float(c.get())/(float(L.get())*float(W.get()))
         else:
@@ -469,16 +493,7 @@ def run():
         fig3.tight_layout()
         fig3.canvas.draw()
         
-        if GorI.get()=='G provided':
-            if Gunits.get()=='2e2/h':
-                Rs_fit=Rs_fit/7.748091729e-5
-            elif Gunits.get()=='e2/h':
-                Rs_fit=Rs_fit/7.748091729e-5*2
-        
-        ax[0].plot(exportdatadict['Vg for Rs fit (V)'],Rs_fit,label='fit for R_s')
-        ax[0].legend()
-        fig1.canvas.draw()
-        
+
     def clear_mobility():
         fig3.clf()
         fig3.canvas.draw()
@@ -490,11 +505,14 @@ def run():
     def plot_drude():
         
         Vg,G,holes=VgandG(convertunits=True)
+
+        varyRs={'Fixed Rs':False,
+                'Initial Rs':True}
             
         mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude=perform_drude_fit(Vg,G,
                                                         paramdict['Vth (V)'],
                                                         float(initial_Rs.get()),float(initial_mu.get())*1e-4,
-                                                        float(L.get()),float(c.get()),holes)
+                                                        float(L.get()),float(c.get()),holes,varyRs[Rs_initorfix.get()])
         
         paramdict['mu_FET (m2/Vs)']=mu_drude
         #paramdict['Rs_drude (Ohm)']=Rs_drude           

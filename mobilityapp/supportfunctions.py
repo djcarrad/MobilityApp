@@ -186,9 +186,9 @@ def perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,c,holes=False):
     
     return Rs,Rs_fit,V_Rs_ind,result_drudeRs
 
-def perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,c,holes=False):
+def perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,c,holes=False,varyRs=True):
     params_drude = Parameters()
-    params_drude.add('Rs',value=initial_Rs) #Allow to vary for the purpose of illustration.
+    params_drude.add('Rs',value=initial_Rs,vary=varyRs) #Allow to vary for the purpose of illustration.
     params_drude.add('mu',value=initial_mu)
     params_drude.add('Vth',value=Vth) #Can/should vary now.
     params_drude.add('L',value=L,vary=False)
