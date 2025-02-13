@@ -29,6 +29,10 @@ To run the GUI, simply run from the command line:
 
     mobilityapp
 
+To rescale/resize the GUI to better fit your screen, you can specify a multiplier, e.g.
+
+    mobilityapp 2
+
 The 'examples' Jupyter notebook runs through how to use each module of the MobilityApp. If Jupyter isn't already installed:
 
     pip install jupyterlab

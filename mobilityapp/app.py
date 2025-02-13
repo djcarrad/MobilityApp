@@ -13,10 +13,15 @@ from tkinter import *
 from tkinter import ttk
 import tkinter as tk
 
+from functools import partial
+
 from .supportfunctions import *
 
-def run():
+def run(scaling=0):
     root = Tk()
+    if scaling !=0:
+        root.tk.call('tk', 'scaling', scaling)
+
     root.title('MobilityApp: Calculate mobility and density from two-terminal FET data')
     ## Pick the datafile
     dataframe = ttk.Frame(root, padding='3 3 12 12')
@@ -305,6 +310,12 @@ def run():
         ax[1].set_xlabel('Gate voltage (V)')
         ax[1].set_ylabel(f'$dG/dV_g$ (mS/V)')
         ax[1].legend()
+        if Vmin.get()!='Min' and Vmax.get()!='Max':
+            ax[1].set_xlim([float(Vmin.get()),float(Vmax.get())])
+        elif Vmin.get()!='Min':
+            ax[1].set_xlim([float(Vmin.get()),ax[1].get_xlim()[1]])
+        elif Vmax.get()!='Max':
+            ax[1].set_xlim([ax[1].get_xlim()[0],float(Vmax.get())])
         fig2.tight_layout()
         fig2.canvas.draw()
             
@@ -626,5 +637,22 @@ def run():
     s3 = ttk.Scrollbar(exportframe, orient=HORIZONTAL, command=parambox.xview)
     s3.grid(column=3,row=2,columnspan=2,sticky=('W E'))
     parambox['xscrollcommand'] = s3.set
+
+    # resizeframe=ttk.Frame(exportframe)
+    # resizeframe.grid(column=0,row=3,columnspan=6,sticky='E')
+    # resizedict={'50%':0.5,'75%':0.75,'100%':1,
+    #             '150%':1.5,'200%':2, '250%':2.5, '300%':3}
+    # resizeoptions=list(resizedict.keys())
+    # resizevar=StringVar()
+    # resizevar.set('100%')
+
+    # def resizewindow(val,root):
+    #     print(val,resizedict[val],root)
+    #     root.tk.call('tk', 'scaling', resizedict[val])
+
+    # resizeoptionmenu=OptionMenu(resizeframe,resizevar,*resizeoptions,
+    #                             command=partial(resizewindow,root=root))
+    # resizeoptionmenu.grid(row=0,column=1)
+    # Label(resizeframe,text='Window size').grid(row=0,column=0)
 
     root.mainloop()
