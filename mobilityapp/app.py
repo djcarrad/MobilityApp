@@ -228,7 +228,7 @@ def run(scaling=0):
     databottomframe=ttk.Frame(dataframe)
     databottomframe.grid(row=1)
     ax={}
-    figuresize=(3.75,2.25)
+    figuresize=(3.75,2.5)
     plt.rcParams.update({'font.size': 8})
     fig1 = Figure(figsize=figuresize, dpi=100)
     canvas1 = FigureCanvasTkAgg(fig1, master=databottomframe)  # A tk.DrawingArea.
@@ -320,20 +320,25 @@ def run(scaling=0):
         fig2.canvas.draw()
             
         # try:
-        V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin.get(),Vmax=Vmax.get(),holes=holes)
+        V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit,uncertainties,V0_uncertainty,Vth_uncertainty,d_Vg=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin.get(),Vmax=Vmax.get(),holes=holes)
         paramdict['V0 (V)']=V0
+        paramdict['V0 uncertainty (V)']=V0_uncertainty
         paramdict['Vth (V)']=Vth
+        paramdict['Vth uncertainty (V)']=Vth_uncertainty
         paramdict['Vg_infl (V)']=Vg_infl
+        paramdict['Vg_infl uncertainty (V)']=d_Vg
         paramdict['V_Rs (V)']=V_Rs
                                 
         set_exportparams()
         
         exportdatadict['dGdVg fit (S/V)']=deriv_fit
+        exportdatadict['dGdVg fit uncertainties (S/V)']=uncertainties
         exportdatadict['Inflection fit (S)']=inflectionline
         set_exportdata()
         # if holes:
         #     ax[1].plot(Vg,-deriv_fit[::-1]*1e3,label='fit')
         # else:
+        ax[1].errorbar(Vg,deriv_fit*1e3,yerr=uncertainties*1e3,fmt='-',alpha=0.2,label='fit uncertainty')
         ax[1].plot(Vg,deriv_fit*1e3,label='fit')
         ax[1].legend()
         fig2.canvas.draw()
@@ -473,7 +478,8 @@ def run(scaling=0):
             ax[0].legend()
             fig1.canvas.draw()
         
-        paramdict['Rs (Ohm)']=Rs             
+        paramdict['Rs (Ohm)']=Rs
+        paramdict['Rs uncertainty (Ohm)']=result_drudeRs.params['Rs'].stderr         
         set_exportparams()
 
         if Ctype.get()=='Width':

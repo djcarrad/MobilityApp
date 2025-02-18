@@ -106,36 +106,80 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax,holes=False):
     # Perform the fit using lmfit
     result = minimize(residual, params, args=(Vg[min_ind:max_ind], dGdVg[min_ind:max_ind]))
 
+    d_Vg=result.params['x0'].stderr #This is the uncertainty in the voltage at the inflection point; we'll use it later
+
     # Generate two versions of the best-fit curve; one for plotting, one for extracting values more precisely
     Vgfine=np.linspace(Vg[min_ind],Vg[max_ind],10001) #Makes the method more robust to sparse datasets.
     deriv_fit = model(result.params, Vg)
     deriv_fitfine = model(result.params, Vgfine)
+    
+    uncertainties=compute_asym_uncertainties(result, Vg)
+    uncertainties_fine=compute_asym_uncertainties(result, Vgfine)
 
     infl_slope=deriv_fitfine.max()    #Slope in G(Vg) at the inflection point is simply the maximum of the derivative
     infl_ind=deriv_fitfine.argmax()   #Array index where inflection point occurs
+    infl_slope_uncertainty=uncertainties_fine[infl_ind]     #Uncertainty in the slope
     
     if holes: #Since we flipped the derivative data earlier, we need to reverse everything.
         infl_slope=-infl_slope
         deriv_fit=-deriv_fit[::-1]
         Vg_infl=Vgfine[-infl_ind]             #Value of Vg at the inflection point
+        Vg_infl_min=Vgfine[-infl_ind] - d_Vg
+        Vg_infl_max=Vgfine[-infl_ind] + d_Vg
     else:
         Vg_infl=Vgfine[infl_ind]             #Value of Vg at the inflection point
+        Vg_infl_min=Vgfine[infl_ind] - d_Vg
+        Vg_infl_max=Vgfine[infl_ind] + d_Vg
 
     if smoothing !=0:
-        G_infl=np.interp(Vg_infl, Vg, Gsmooth)#Gsmooth[infl_ind]
+        G_infl=np.interp(Vg_infl, Vg, Gsmooth)
+        G_infl_uncertainty=np.interp(Vg_infl_max, Vg, Gsmooth) - np.interp(Vg_infl_min, Vg, Gsmooth)
     else:
         G_infl=np.interp(Vg_infl, Vg, G)#G[infl_ind]  #Value of G at the inflection point
+        G_infl_uncertainty=np.interp(Vg_infl_max, Vg, G) - np.interp(Vg_infl_min, Vg, G)
 
     G_intercept = G_infl-infl_slope*Vg_infl  #Finding 'threshold' voltage
+    G_intercept_uncertainty = np.sqrt(G_infl_uncertainty**2 + (infl_slope_uncertainty*Vg_infl)**2 + (infl_slope*d_Vg)**2)
     Vth=-G_intercept/infl_slope
+    Vth_uncertainty = np.sqrt((G_intercept_uncertainty/infl_slope)**2 + (G_intercept*infl_slope_uncertainty/infl_slope**2)**2)
     
     V_Rs = Vg_infl+2*(Vg_infl-Vth)   #Vg above which we will use to calculate series resistance
     
     inflectionline=infl_slope*Vg+G_intercept      #Draw a line tangential with the inflection point. Vg-intercept is Vth
 
     V0 = Vth-2*(Vg_infl-Vth)         #Vg for which density extrapolates to zero.
+    V0_uncertainty = np.sqrt(Vth_uncertainty**2 + (2*d_Vg)**2)
 
-    return V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result
+    return V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result,uncertainties,V0_uncertainty,Vth_uncertainty,d_Vg
+
+def compute_asym_uncertainties(result, Vg):
+    # To propogate uncertainties, need to have partial derivatives of the model with respect to the parameters.
+    # e.g. f_A is the partial derivative of the asymmetric lorentzian with respect to A.
+    # The uncertainty in the parameters, e.g. d_A comes from the fit result. The total uncertainty is then
+    # d_F = sqrt((d_A*f_A)^2 + (d_x0*f_x0)^2 + (d_a*f_a)^2 + (d_u0*f_u0)^2)
+
+    def f_A(x,A,x0,a,u0):
+        return (np.exp(a*(x - x0)) + 1)/(np.pi*u0*(1 + (x - x0)**2*(np.exp(a*(x - x0)) + 1)**2/u0**2))
+    def f_x0(x,A,x0,a,u0):
+        return -A*a*np.exp(a*(x - x0))/(np.pi*u0*(1 + (x - x0)**2*(np.exp(a*(x - x0)) + 1)**2/u0**2)) + A*(2*a*(x - x0)**2*(np.exp(a*(x - x0)) + 1)*np.exp(a*(x - x0))/u0**2 - (-2*x + 2*x0)*(np.exp(a*(x - x0)) + 1)**2/u0**2)*(np.exp(a*(x - x0)) + 1)/(np.pi*u0*(1 + (x - x0)**2*(np.exp(a*(x - x0)) + 1)**2/u0**2)**2)
+    def f_a(x,A,x0,a,u0):
+        return A*(x - x0)*np.exp(a*(x - x0))/(np.pi*u0*(1 + (x - x0)**2*(np.exp(a*(x - x0)) + 1)**2/u0**2)) - 2*A*(x - x0)**3*(np.exp(a*(x - x0)) + 1)**2*np.exp(a*(x - x0))/(np.pi*u0**3*(1 + (x - x0)**2*(np.exp(a*(x - x0)) + 1)**2/u0**2)**2)
+    def f_u0(x,A,x0,a,u0):
+        return -A*(np.exp(a*(x - x0)) + 1)/(np.pi*u0**2*(1 + (x - x0)**2*(np.exp(a*(x - x0)) + 1)**2/u0**2)) + 2*A*(x - x0)**2*(np.exp(a*(x - x0)) + 1)**3/(np.pi*u0**4*(1 + (x - x0)**2*(np.exp(a*(x - x0)) + 1)**2/u0**2)**2)
+    
+    A=result.params['A'].value
+    d_A=result.params['A'].stderr
+    x0=result.params['x0'].value
+    d_x0=result.params['x0'].stderr
+    a=result.params['a'].value
+    d_a=result.params['a'].stderr
+    u0=result.params['u0'].value
+    d_u0=result.params['u0'].stderr
+
+    d_F=np.sqrt((d_A*f_A(Vg,A,x0,a,u0))**2 + (d_x0*f_x0(Vg,A,x0,a,u0))**2 + (d_a*f_a(Vg,A,x0,a,u0))**2 + (d_u0*f_u0(Vg,A,x0,a,u0))**2)
+
+    return d_F
+
 
 def manual_inflection(Vg,G,Gsmooth,smoothing,Vg_infl,infl_slope):
     if smoothing !=0:
