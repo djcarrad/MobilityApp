@@ -113,7 +113,7 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax,holes=False):
     deriv_fit = model(result.params, Vg)
     deriv_fitfine = model(result.params, Vgfine)
     
-    uncertainties=compute_asym_uncertainties(result, Vg)
+    uncertainties=compute_asym_uncertainties(result, Vg) #Compute the uncertainty in the fit to dGdVg as a function of Vg
     uncertainties_fine=compute_asym_uncertainties(result, Vgfine)
 
     infl_slope=deriv_fitfine.max()    #Slope in G(Vg) at the inflection point is simply the maximum of the derivative
@@ -180,6 +180,36 @@ def compute_asym_uncertainties(result, Vg):
 
     return d_F
 
+def compute_mu_uncertainty(Vg,G,L,C,CperA,V0,Rs,d_L,d_C,d_CperA,d_V0,d_Rs,holes=False):
+    def f_L(Vg,G,L,C,V0,Rs,holes):
+        if not holes:
+            return 2*L/(C*(Rs + 1/G)*(-V0 + Vg))
+        else: 
+            return 2*L/(C*(Rs + 1/G)*(V0 - Vg))
+    def f_C(Vg,G,L,C,V0,Rs,holes):
+        if not holes:
+            return -L**2/(C**2*(Rs + 1/G)*(-V0 + Vg))
+        else:
+            return -L**2/(C**2*(Rs + 1/G)*(V0 - Vg))
+    def f_V0(Vg,G,L,C,V0,Rs,holes):
+        if not holes:
+            return L**2/(C*(Rs + 1/G)*(-V0 + Vg)**2)
+        else:
+            return L**2/(C*(Rs + 1/G)*(V0 - Vg)**2)
+    def f_Rs(Vg,G,L,C,V0,Rs,holes):
+        if not holes:
+            return -L**2/(C*(Rs + 1/G)**2*(-V0 + Vg))
+        else:
+            return -L**2/(C*(Rs + 1/G)**2*(V0 - Vg))
+    
+    d_mu=np.sqrt((f_L(Vg,G,L,C,V0,Rs,holes)*d_L)**2 + (f_C(Vg,G,L,C,V0,Rs,holes)*d_C)**2 + (f_V0(Vg,G,L,C,V0,Rs,holes)*d_V0)**2 + (f_Rs(Vg,G,L,C,V0,Rs,holes)*d_Rs)**2)
+
+    if not holes:
+        d_density=np.sqrt(((Vg - V0)*d_CperA/1.602176634e-19)**2 + (CperA*d_V0/1.602176634e-19)**2)
+    else:
+        d_density=np.sqrt(((V0 - Vg)*d_CperA/1.602176634e-19)**2 + (CperA*d_V0/1.602176634e-19)**2)
+    
+    return d_mu,d_density
 
 def manual_inflection(Vg,G,Gsmooth,smoothing,Vg_infl,infl_slope):
     if smoothing !=0:

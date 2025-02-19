@@ -128,15 +128,23 @@ def run(scaling=0):
     ## Enter parameters
     paramsframe = ttk.Frame(root, padding='3 3 12 3')
     paramsframe.grid(column=0,row=1,sticky=('N,W,E,S'))
-    Label(paramsframe,text='4) Enter geometrical properties of your device',fg='green').grid(row=0,columnspan=3)
-    guesslabel=Label(paramsframe,text='Enter intial guesses for series resistance and mobility')
-    guesslabel.grid(row=4,columnspan=3)
+
+    geomframe=ttk.Frame(paramsframe)
+    geomframe.grid(row=0)
+    Label(geomframe,text='4) Enter geometrical properties of your device',fg='green').grid(row=0,columnspan=5)
+
     c=StringVar()
     c.set('5.3e-15')
     L=StringVar()
     L.set('3.6e-6')
     W=StringVar()
     W.set('280e-9')
+    d_C=StringVar()
+    d_C.set('0.1e-15')
+    d_L=StringVar()
+    d_L.set('0.1e-6')
+    d_W=StringVar()
+    d_W.set('10e-9')
     initial_Rs=StringVar()
     initial_Rs.set('10000')
     Rs_initorfix=StringVar()
@@ -145,36 +153,59 @@ def run(scaling=0):
     initial_mu.set('4000')
     def update_params(*args):
         if Ctype.get()=='Width':
-            Wunits.config(text='(F)')
+            Wunits.config(text='(m)')
         else:
             Wunits.config(text='(F/m^2)')
     Ctype=StringVar()
     Ctype.set('Width')
     Ctype.trace('w',update_params)
-    Label(paramsframe, text='Capacitance').grid(row=1,sticky='E')
-    Label(paramsframe, text='Length').grid(row=2,sticky='E')
-    Cdropmenu=OptionMenu(paramsframe,Ctype,*['Width','Cap per area'])
+
+    Label(geomframe, text='Capacitance').grid(row=1,sticky='E')
+    Label(geomframe, text='Length').grid(row=2,sticky='E')
+    Cdropmenu=OptionMenu(geomframe,Ctype,*['Width','Cap per area'])
     Cdropmenu.grid(row=3,sticky='E')
     #Label(paramsframe, text='Width').grid(row=3,sticky='E')
-    Rsdropmenu=OptionMenu(paramsframe,Rs_initorfix,*['Initial Rs','Fixed Rs'])
-    Rsdropmenu.grid(row=5,sticky='E')
-    initmulabel=Label(paramsframe, text='Initial mu')
-    initmulabel.grid(row=6,sticky='E')
-    Label(paramsframe, text='(F)').grid(row=1,column=2,sticky='W')
-    Label(paramsframe, text='(m)').grid(row=2,column=2,sticky='W')
-    Wunits=Label(paramsframe, text='(m)')
-    Wunits.grid(row=3,column=2,sticky='W')
-    Label(paramsframe, text='(Ohm)').grid(row=5,column=2,sticky='W')
-    Label(paramsframe, text='(cm^2/Vs)').grid(row=6,column=2,sticky='W')
-    c_entry=Entry(paramsframe,textvariable=c)
+
+    entrywidth=10
+
+    c_entry=Entry(geomframe,textvariable=c,width=entrywidth)
     c_entry.grid(row=1,column=1)
-    L_entry=Entry(paramsframe,textvariable=L).grid(row=2,column=1)
-    W_entry=Entry(paramsframe,textvariable=W)
+    L_entry=Entry(geomframe,textvariable=L,width=entrywidth)
+    L_entry.grid(row=2,column=1)
+    W_entry=Entry(geomframe,textvariable=W,width=entrywidth)
     W_entry.grid(row=3,column=1)
-    initRs_entry=Entry(paramsframe,textvariable=initial_Rs)
-    initRs_entry.grid(row=5,column=1)
-    initmu_entry=Entry(paramsframe,textvariable=initial_mu)
-    initmu_entry.grid(row=6,column=1)
+
+    Label(geomframe,text='+/-').grid(row=1,column=2)
+    Label(geomframe,text='+/-').grid(row=2,column=2)
+    Label(geomframe,text='+/-').grid(row=3,column=2)
+
+    d_C_entry=Entry(geomframe,textvariable=d_C,width=entrywidth)
+    d_C_entry.grid(row=1,column=3)
+    d_L_entry=Entry(geomframe,textvariable=d_L,width=entrywidth)
+    d_L_entry.grid(row=2,column=3)
+    d_W_entry=Entry(geomframe,textvariable=d_W,width=entrywidth)
+    d_W_entry.grid(row=3,column=3)
+
+    Label(geomframe, text='(F)').grid(row=1,column=4,sticky='W')
+    Label(geomframe, text='(m)').grid(row=2,column=4,sticky='W')
+    Wunits=Label(geomframe, text='(m)')
+    Wunits.grid(row=3,column=4,sticky='W')
+
+    guessframe=ttk.Frame(paramsframe)
+    guessframe.grid(row=1)
+
+    guesslabel=Label(guessframe,text='Enter intial guesses for mobility and series resistance')
+    guesslabel.grid(row=0,columnspan=3)
+    Rsdropmenu=OptionMenu(guessframe,Rs_initorfix,*['Initial Rs','Fixed Rs'])
+    Rsdropmenu.grid(row=2,sticky='E')
+    initmulabel=Label(guessframe, text='Initial mu')
+    initmulabel.grid(row=1,sticky='E')
+    initRs_entry=Entry(guessframe,textvariable=initial_Rs,width=entrywidth)
+    initRs_entry.grid(row=2,column=1)
+    initmu_entry=Entry(guessframe,textvariable=initial_mu,width=entrywidth)
+    initmu_entry.grid(row=1,column=1)
+    Label(guessframe, text='(Ohm)').grid(row=2,column=2,sticky='W')
+    Label(guessframe, text='(cm^2/Vs)').grid(row=1,column=2,sticky='W')
     ctt=CreateToolTip(c_entry,'It is important to have an accurate calculation/simulation of the '
                     'capacitance to obtain the proper absolute value of mobility. However, '
                     'a wrong value will not change the trend of mobility vs density, just the absolute value.')
@@ -190,9 +221,12 @@ def run(scaling=0):
                             'the capacitance per area as well as the total capcitance. ')
     CreateToolTip(Rsdropmenu,'If you know Rs with high certainty from independent measurements, you may '
                         'choose to fix it, rather than providing an inital value for fitting.')
-    for child in paramsframe.winfo_children():
+
+    for child in geomframe.winfo_children():
         child.grid_configure(padx=2,pady=2)
-        
+
+    for child in guessframe.winfo_children():
+        child.grid_configure(padx=2,pady=2)
         
     def VgandG(convertunits=False):
         Vg=data[Vgcolumn.get()]
@@ -228,7 +262,7 @@ def run(scaling=0):
     databottomframe=ttk.Frame(dataframe)
     databottomframe.grid(row=1)
     ax={}
-    figuresize=(3.75,2.5)
+    figuresize=(3.9,2.4)
     plt.rcParams.update({'font.size': 8})
     fig1 = Figure(figsize=figuresize, dpi=100)
     canvas1 = FigureCanvasTkAgg(fig1, master=databottomframe)  # A tk.DrawingArea.
@@ -479,13 +513,21 @@ def run(scaling=0):
             fig1.canvas.draw()
         
         paramdict['Rs (Ohm)']=Rs
-        paramdict['Rs uncertainty (Ohm)']=result_drudeRs.params['Rs'].stderr         
+        paramdict['Rs uncertainty (Ohm)']=result_drudeRs.params['Rs'].stderr
         set_exportparams()
 
         if Ctype.get()=='Width':
-            Cperarea=float(c.get())/(float(L.get())*float(W.get()))
+            c_val=float(c.get())
+            d_C_val=float(d_C.get())
+            L_val=float(L.get())
+            d_L_val=float(d_L.get())
+            W_val=float(W.get())
+            d_W_val=float(d_W.get())
+            Cperarea=c_val/(L_val*W_val)
+            d_Cperarea=np.sqrt((d_C_val/(L_val*W_val))**2+(c_val*d_L_val/(L_val**2*W_val))**2+(c_val*d_W_val/(L_val*W_val**2))**2)
         else:
             Cperarea=float(W.get())
+            d_Cperarea=float(d_W.get())
         #density=float(c.get())*(Vg-paramdict['V0 (V)'])/(float(L.get())*float(W.get())*1.6e-19)
         if holes:
             density=Cperarea*(paramdict['V0 (V)']-Vg)/1.602176634e-19
@@ -493,8 +535,23 @@ def run(scaling=0):
         else:
             density=Cperarea*(Vg-paramdict['V0 (V)'])/1.602176634e-19
             mu_eff=float(L.get())**2/(float(c.get())*(Vg-paramdict['V0 (V)'])*((1/G)-Rs))
+
         exportdatadict['density (1/m2)']=density
         exportdatadict['mu_eff (m2/Vs)']=mu_eff
+
+        try:
+            d_V0=paramdict['V0 uncertainty (V)']
+            d_L_val=float(d_L.get())
+            d_C_val=float(d_C.get())
+            d_mu_eff,d_density = compute_mu_uncertainty(Vg,G,float(L.get()),float(c.get()),Cperarea,paramdict['V0 (V)'],Rs,d_L_val,d_C_val,d_Cperarea,d_V0,result_drudeRs.params['Rs'].stderr,holes)
+            exportdatadict['density uncertainties (1/m2)']=d_density
+            exportdatadict['mu_eff uncertainties (m2/Vs)']=d_mu_eff
+            mu_eff_plus=mu_eff+d_mu_eff
+            mu_eff_minus=mu_eff-d_mu_eff
+            density_plus=density+d_density
+            density_minus=density-d_density
+        except KeyError:
+            plot_uncertainties=False
         
         set_exportdata()
         plotstart=(np.abs(Vg - (2*paramdict['Vth (V)']-paramdict['Vg_infl (V)']))).argmin()
@@ -504,6 +561,10 @@ def run(scaling=0):
             ax[2].plot(density[:plotstart]*1e-12/1e4,mu_eff[:plotstart]*1e4,'k',label='mu_eff')
         else:
             ax[2].plot(density[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,'k',label='mu_eff')
+            #ax[2].fill_between(density[plotstart:]*1e-12/1e4,mu_eff_minus[plotstart:]*1e4,mu_eff_plus[plotstart:]*1e4,alpha=0.2,color='k',label='uncertainty')
+            #ax[2].fill_betweenx(mu_eff[plotstart:]*1e4,density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:]*1e-12/1e4,alpha=0.2,color='r')
+            ax[2].fill(np.append(density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:][::-1]*1e-12/1e4),
+                        np.append(mu_eff_minus[plotstart:]*1e4,mu_eff_plus[plotstart:][::-1]*1e4),alpha=0.2,color='r',label='uncertainty')
         ax[2].set_xlabel('Carrier density x 10$^{12}$ (cm$^{-2}$)')
         ax[2].set_ylabel('Mobility (cm$^2$/(Vs))')
         ax[2].legend()
@@ -627,7 +688,7 @@ def run(scaling=0):
             paramcopy+=param+': '+str(paramdict[param])+'\n'
         root.clipboard_append(str(paramcopy))
     Button(exportframe, text='Copy params', command=copy_params).grid(row=0,column=4,columnspan=2)
-    databox=Listbox(exportframe,listvariable=(exportdatavar),height=11,width=38)
+    databox=Listbox(exportframe,listvariable=(exportdatavar),height=12,width=38)
     databox.grid(column=0,row=1,columnspan=2,sticky=('N W E S'))
     s1 = ttk.Scrollbar(exportframe, orient=VERTICAL, command=databox.yview)
     s1.grid(column=2,row=1,sticky=('N S'))
@@ -635,7 +696,7 @@ def run(scaling=0):
     s2 = ttk.Scrollbar(exportframe, orient=HORIZONTAL, command=databox.xview)
     s2.grid(column=0,row=2,columnspan=2,sticky=('W E'))
     databox['xscrollcommand'] = s2.set
-    parambox=Listbox(exportframe,listvariable=(exportparamsvar),height=11,width=30)
+    parambox=Listbox(exportframe,listvariable=(exportparamsvar),height=12,width=30)
     parambox.grid(column=3,row=1,columnspan=2,sticky=('N W E S'))
     s3 = ttk.Scrollbar(exportframe, orient=VERTICAL, command=parambox.yview)
     s3.grid(column=5,row=1,sticky=('N S'))
