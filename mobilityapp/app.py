@@ -44,6 +44,10 @@ def run(scaling=0):
         for param in paramdict:
             exportparams.append(f'{param}   {paramdict[param]}')
         exportparamsvar.set(exportparams)
+
+    def key_deleter(dict,key):
+        if key in dict:
+            del dict[key]
     def load_data():
         data.clear()  #Clear dictionaries when loading a new datafile to make sure no old data/params get stuck around
         paramdict.clear()
@@ -112,17 +116,24 @@ def run(scaling=0):
     Gdroptt=CreateToolTip(Gdropmenu,'Very important to make sure this is set correctly')
     GorIframe = ttk.Frame(dataframe, padding='3 3 10 10')
     GorIframe.grid(column=0,row=3)
-    Label(GorIframe,text='Or, specify Vsd if supplying current').grid(row=0,columnspan=4)
+    Label(GorIframe,text='Or, specify Vsd if providing current').grid(row=0,columnspan=4)
+    def set_Vsd_entry(*args):
+        if GorI.get()=='G provided':
+            Vsd_entry.config(state='disabled')
+        else:
+            Vsd_entry.config(state='normal')
     options=['G provided','I provided']
     GorI=StringVar()
     GorI.set('G provided')
-    GorIdropmenu=OptionMenu(GorIframe,GorI,*options)
+    GorIdropmenu=OptionMenu(GorIframe,GorI,*options,command=set_Vsd_entry)
     GorIdropmenu.grid(row=1,column=0,sticky='E')
     Label(GorIframe,text='Vsd').grid(row=1,column=1,sticky='E')
     Vsd=StringVar()
     Vsd.set('0')
-    Vsd_entry=Entry(GorIframe,textvariable=Vsd,width=6).grid(row=1,column=2)
+    Vsd_entry=Entry(GorIframe,textvariable=Vsd,width=6)
+    Vsd_entry.grid(row=1,column=2)
     Label(GorIframe, text='(V)').grid(row=1,column=3,sticky='W')
+    set_Vsd_entry()
 
         
     ## Enter parameters
@@ -147,6 +158,8 @@ def run(scaling=0):
     d_W.set('10e-9')
     initial_Rs=StringVar()
     initial_Rs.set('10000')
+    Rs_error=StringVar()
+    Rs_error.set('1000')
     Rs_initorfix=StringVar()
     Rs_initorfix.set('Initial Rs')
     initial_mu=StringVar()
@@ -160,8 +173,10 @@ def run(scaling=0):
     Ctype.set('Width')
     Ctype.trace('w',update_params)
 
-    Label(geomframe, text='Capacitance').grid(row=1,sticky='E')
-    Label(geomframe, text='Length').grid(row=2,sticky='E')
+    clabel=Label(geomframe, text='Capacitance')
+    clabel.grid(row=1,sticky='E')
+    llabel=Label(geomframe, text='Length')
+    llabel.grid(row=2,sticky='E')
     Cdropmenu=OptionMenu(geomframe,Ctype,*['Width','Cap per area'])
     Cdropmenu.grid(row=3,sticky='E')
     #Label(paramsframe, text='Width').grid(row=3,sticky='E')
@@ -191,12 +206,34 @@ def run(scaling=0):
     Wunits=Label(geomframe, text='(m)')
     Wunits.grid(row=3,column=4,sticky='W')
 
+    captext=('It is important to have an accurate calculation/simulation of the capacitance to obtain the proper absolute value of mobility. However, a wrong value will not change the trend of mobility vs density, just the absolute value.')
+    CreateToolTip(c_entry,captext)
+    CreateToolTip(clabel,captext)
+    CreateToolTip(d_C_entry,captext)
+
+    cperatext=('Calculating the density requires the capacitance per unit area, '
+                            'which for planar devices is simply C/(length*width). '
+                            'However, nanowires and other irregularly shaped devices do not '
+                            'have a well-defined width. In this case, we instead need to know '
+                            'the capacitance per area as well as the total capcitance. ')
+    
+    CreateToolTip(Cdropmenu,cperatext)
+    CreateToolTip(W_entry,cperatext)
+    CreateToolTip(Wunits,cperatext)
+    CreateToolTip(d_W_entry,cperatext)
+
     guessframe=ttk.Frame(paramsframe)
     guessframe.grid(row=1)
 
+    def set_initorfix(*args):
+        if Rs_initorfix.get()=='Fixed Rs':
+            Rs_error_entry.config(state='normal')
+        else:
+            Rs_error_entry.config(state='disabled')
+
     guesslabel=Label(guessframe,text='Enter intial guesses for mobility and series resistance')
     guesslabel.grid(row=0,columnspan=3)
-    Rsdropmenu=OptionMenu(guessframe,Rs_initorfix,*['Initial Rs','Fixed Rs'])
+    Rsdropmenu=OptionMenu(guessframe,Rs_initorfix,*['Initial Rs','Fixed Rs'],command=set_initorfix)
     Rsdropmenu.grid(row=2,sticky='E')
     initmulabel=Label(guessframe, text='Initial mu')
     initmulabel.grid(row=1,sticky='E')
@@ -204,23 +241,34 @@ def run(scaling=0):
     initRs_entry.grid(row=2,column=1)
     initmu_entry=Entry(guessframe,textvariable=initial_mu,width=entrywidth)
     initmu_entry.grid(row=1,column=1)
-    Label(guessframe, text='(Ohm)').grid(row=2,column=2,sticky='W')
+    Rs_error_label=Label(guessframe,text='Rs uncertainty')
+    Rs_error_label.grid(row=3,column=0,sticky='E')
+    Rs_error_entry=Entry(guessframe,textvariable=Rs_error,width=entrywidth)
+    Rs_error_entry.grid(row=3,column=1)
+    Rs_error_units=Label(guessframe,text='(Ohm)')
+    Rs_error_units.grid(row=3,column=2,sticky='W')
+    set_initorfix()
+    initRs_unit=Label(guessframe, text='(Ohm)')
+    initRs_unit.grid(row=2,column=2,sticky='W')
     Label(guessframe, text='(cm^2/Vs)').grid(row=1,column=2,sticky='W')
-    ctt=CreateToolTip(c_entry,'It is important to have an accurate calculation/simulation of the '
-                    'capacitance to obtain the proper absolute value of mobility. However, '
-                    'a wrong value will not change the trend of mobility vs density, just the absolute value.')
+
     guesstext='Setting initial guesses sensibly can help fitting the series resistance properly.'
     CreateToolTip(guesslabel,guesstext)
-    CreateToolTip(initRs_entry,guesstext)
     CreateToolTip(initmu_entry,guesstext)
     CreateToolTip(initmulabel,guesstext)
-    CreateToolTip(Cdropmenu,'Calculating the density requires the capacitance per unit area, '
-                            'which for planar devices is simply C/(length*width). '
-                            'However, nanowires and other irregularly shaped devices do not '
-                            'have a well-defined width. In this case, we instead need to know '
-                            'the capacitance per area as well as the total capcitance. ')
+
     CreateToolTip(Rsdropmenu,'If you know Rs with high certainty from independent measurements, you may '
                         'choose to fix it, rather than providing an inital value for fitting.')
+    CreateToolTip(initRs_entry,'If you know Rs with high certainty from independent measurements, you may '
+                        'choose to fix it, rather than providing an inital value for fitting.')
+    CreateToolTip(initRs_unit,'If you know Rs with high certainty from independent measurements, you may '
+                        'choose to fix it, rather than providing an inital value for fitting.')
+    
+    rstext=('If you are explicitly providing a fixed Rs, you should also provide an uncertainty. '
+            'This is not necessary if you are fitting Rs. ')
+    CreateToolTip(Rs_error_label,rstext)
+    CreateToolTip(Rs_error_entry,rstext)
+    CreateToolTip(Rs_error_units,rstext)
 
     for child in geomframe.winfo_children():
         child.grid_configure(padx=2,pady=2)
@@ -354,13 +402,13 @@ def run(scaling=0):
         fig2.canvas.draw()
             
         # try:
-        V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit,uncertainties,V0_uncertainty,Vth_uncertainty,d_Vg=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin.get(),Vmax=Vmax.get(),holes=holes)
+        V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit,uncertainties,V0_uncertainty,Vth_uncertainty,d_Vg_infl=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin.get(),Vmax=Vmax.get(),holes=holes)
         paramdict['V0 (V)']=V0
         paramdict['V0 uncertainty (V)']=V0_uncertainty
         paramdict['Vth (V)']=Vth
         paramdict['Vth uncertainty (V)']=Vth_uncertainty
         paramdict['Vg_infl (V)']=Vg_infl
-        paramdict['Vg_infl uncertainty (V)']=d_Vg
+        paramdict['Vg_infl uncertainty (V)']=d_Vg_infl
         paramdict['V_Rs (V)']=V_Rs
                                 
         set_exportparams()
@@ -372,8 +420,9 @@ def run(scaling=0):
         # if holes:
         #     ax[1].plot(Vg,-deriv_fit[::-1]*1e3,label='fit')
         # else:
-        ax[1].errorbar(Vg,deriv_fit*1e3,yerr=uncertainties*1e3,fmt='-',alpha=0.2,label='fit uncertainty')
+        #ax[1].errorbar(Vg,deriv_fit*1e3,yerr=uncertainties*1e3,fmt='-',alpha=0.2,label='fit uncertainty')
         ax[1].plot(Vg,deriv_fit*1e3,label='fit')
+        ax[1].fill_between(Vg,(deriv_fit-uncertainties)*1e3,(deriv_fit+uncertainties)*1e3,alpha=0.8,color='tab:blue',label='fit uncertainty')
         ax[1].legend()
         fig2.canvas.draw()
         if GorI.get()=='G provided':
@@ -399,27 +448,40 @@ def run(scaling=0):
     plotderivbutton.grid(row=0)
     clearderivbutton = Button(derivtopframe, text='Clear plot', command=clear_deriv)
     clearderivbutton.grid(row=0,column=10)
-    CreateToolTip(plotderivbutton,'Fit on the derivative of G(Vg). '
-                            'The aim is to find the maximum of dG/dVg, which is the inflection point in G(Vg). '
-                            'The fit can easily fail, but do not give up! Make sure units are correctly selected. '
-                            'Try different amount of smoothing,  '
-                            'and limiting the Vg range which the fit is performed over. '
-                            'If you have to give up, you can enter the peak coordinates manually below.')
+    plotderivtext=('Fit the derivative of G(Vg). The aim is to find the maximum of dG/dVg, which is the inflection point in G(Vg). '
+                    'The fit can sometimes fail, but do not give up! Make sure units are correctly selected. '
+                    'Try different amount of smoothing,  '
+                    'and limiting the Vg range over which the fit is performed. '
+                    'If you have to give up, you can enter the peak coordinates manually below.')
+    CreateToolTip(plotderivbutton,plotderivtext)
     smoothingbut=StringVar()
     smoothingbut.set('0')
-    Label(derivtopframe, text='Smoothing').grid(row=0,column=1,sticky='E')
-    smoothing_entry=Entry(derivtopframe,textvariable=smoothingbut,width=3).grid(row=0,column=2)
+    smoothinglabel=Label(derivtopframe, text='Smoothing')
+    smoothinglabel.grid(row=0,column=1,sticky='E')
+    smoothing_entry=Entry(derivtopframe,textvariable=smoothingbut,width=3)
+    smoothing_entry.grid(row=0,column=2)
     Label(derivtopframe, text='%').grid(row=0,column=3,sticky='W')
     Vmin=StringVar()
     Vmin.set('Min')
-    Label(derivtopframe, text='Vmin').grid(row=0,column=4,sticky='E')
-    Vmin_entry=Entry(derivtopframe,textvariable=Vmin,width=6).grid(row=0,column=5)
+    Vmin_label=Label(derivtopframe, text='Vmin')
+    Vmin_label.grid(row=0,column=4,sticky='E')
+    Vmin_entry=Entry(derivtopframe,textvariable=Vmin,width=6)
+    Vmin_entry.grid(row=0,column=5)
     Label(derivtopframe, text='V').grid(row=0,column=6,sticky='W')
     Vmax=StringVar()
     Vmax.set('Max')
-    Label(derivtopframe, text='Vmax').grid(row=0,column=7,sticky='E')
-    Vmax_entry=Entry(derivtopframe,textvariable=Vmax,width=6).grid(row=0,column=8)
+    Vmax_label=Label(derivtopframe, text='Vmax')
+    Vmax_label.grid(row=0,column=7,sticky='E')
+    Vmax_entry=Entry(derivtopframe,textvariable=Vmax,width=6)
+    Vmax_entry.grid(row=0,column=8)
     Label(derivtopframe, text='V').grid(row=0,column=9,sticky='W')
+
+    CreateToolTip(smoothing_entry,plotderivtext)
+    CreateToolTip(smoothinglabel,plotderivtext)
+    CreateToolTip(Vmin_entry,plotderivtext)
+    CreateToolTip(Vmin_label,plotderivtext)
+    CreateToolTip(Vmax_entry,plotderivtext)
+    CreateToolTip(Vmax_label,plotderivtext)
     
     def plot_manual_inflection():
         Vg,G,holes=VgandG(convertunits=True)
@@ -439,10 +501,18 @@ def run(scaling=0):
         paramdict['Vth (V)']=Vth
         paramdict['Vg_infl (V)']=float(Vg_inflman.get())
         paramdict['V_Rs (V)']=V_Rs
-                                
-        set_exportparams()
 
         exportdatadict['Inflection fit (S)']=inflectionline
+
+        # If the user defines the inflction point manually, we can't calculate the uncertainties
+        # so we remove the relevant keys from the dictionaries
+        key_deleter(paramdict,'V0 uncertainty (V)')
+        key_deleter(paramdict,'Vth uncertainty (V)')
+        key_deleter(paramdict,'Vg_infl uncertainty (V)')
+        key_deleter(exportdatadict,'dGdVg fit (S/V)')
+        key_deleter(exportdatadict,'dGdVg fit uncertainties (S/V)')
+                                
+        set_exportparams()
         set_exportdata()
 
         if GorI.get()=='G provided':
@@ -454,18 +524,35 @@ def run(scaling=0):
         ax[0].legend()
         fig1.canvas.draw()
 
-    Label(derivextraframe,text='Enter peak position manually:').grid(column=0,row=0)
-    Label(derivextraframe,text='Vg_infl').grid(column=1,row=0)
+    manuallabel=Label(derivextraframe,text='Enter peak position manually:')
+    manuallabel.grid(column=0,row=0)
+    manuallabel2=Label(derivextraframe,text='Vg_infl')
+    manuallabel2.grid(column=1,row=0)
     Vg_inflman=StringVar()
-    Vg_inflmanentry=Entry(derivextraframe,textvariable=Vg_inflman,width=5).grid(column=2,row=0)
+    Vg_inflmanentry=Entry(derivextraframe,textvariable=Vg_inflman,width=5)
+    Vg_inflmanentry.grid(column=2,row=0)
     Label(derivextraframe,text='V').grid(column=3,row=0)
-    Label(derivextraframe,text='dG/dVg_infl').grid(column=4,row=0)
+    manuallabel3=Label(derivextraframe,text='dG/dVg_infl')
+    manuallabel3.grid(column=4,row=0)
     dGdVg_inflman=StringVar()
-    dGdVg_inflmanentry=Entry(derivextraframe,textvariable=dGdVg_inflman,width=5).grid(column=5,row=0)
+    dGdVg_inflmanentry=Entry(derivextraframe,textvariable=dGdVg_inflman,width=5)
+    dGdVg_inflmanentry.grid(column=5,row=0)
     Label(derivextraframe,text='(mS/V)').grid(column=6,row=0)
     manualinflbutton=Button(derivextraframe,text='Enter',command=plot_manual_inflection)
     manualinflbutton.grid(column=7,row=0)
     
+    manualtttext=('You can enter the peak position manually if the fit fails. '
+                'However, uncertainties will not be calculated/propogated. '
+                'If you really need to manually enter the position and the data is headed for publication, '
+                'you should manually analyse the data using the "examples" jupyter notebook, and '
+                'properly calculate the uncertainties there.')
+    CreateToolTip(manualinflbutton,manualtttext)
+    CreateToolTip(manuallabel,manualtttext)
+    CreateToolTip(manuallabel2,manualtttext)
+    CreateToolTip(manuallabel3,manualtttext)
+    CreateToolTip(Vg_inflmanentry,manualtttext)
+    CreateToolTip(dGdVg_inflmanentry,manualtttext)
+
     
     
     ## Window to plot final mobility vs density plot
@@ -489,6 +576,11 @@ def run(scaling=0):
         
         if Rs_initorfix.get()=='Fixed Rs':
             Rs=float(initial_Rs.get())
+            Rs_uncertainty=float(Rs_error.get())
+
+            # If the user previously fitted Rs, but now provides a fixed value, delete these from the data.
+            key_deleter(exportdatadict,'Vg for Rs fit (V)')
+            key_deleter(exportdatadict,'Rs fit (S)')
 
         else:
             Rs,Rs_fit,V_Rs_ind,result_drudeRs=perform_Rs_fit(Vg,G,
@@ -511,9 +603,11 @@ def run(scaling=0):
             ax[0].plot(exportdatadict['Vg for Rs fit (V)'],Rs_fit,label='fit for R_s')
             ax[0].legend()
             fig1.canvas.draw()
+
+            Rs_uncertainty=result_drudeRs.params['Rs'].stderr
         
         paramdict['Rs (Ohm)']=Rs
-        paramdict['Rs uncertainty (Ohm)']=result_drudeRs.params['Rs'].stderr
+        paramdict['Rs uncertainty (Ohm)']=Rs_uncertainty
         set_exportparams()
 
         if Ctype.get()=='Width':
@@ -543,13 +637,14 @@ def run(scaling=0):
             d_V0=paramdict['V0 uncertainty (V)']
             d_L_val=float(d_L.get())
             d_C_val=float(d_C.get())
-            d_mu_eff,d_density = compute_mu_uncertainty(Vg,G,float(L.get()),float(c.get()),Cperarea,paramdict['V0 (V)'],Rs,d_L_val,d_C_val,d_Cperarea,d_V0,result_drudeRs.params['Rs'].stderr,holes)
+            d_mu_eff,d_density = compute_mu_uncertainty(Vg,G,float(L.get()),float(c.get()),Cperarea,paramdict['V0 (V)'],Rs,d_L_val,d_C_val,d_Cperarea,d_V0,Rs_uncertainty,holes)
             exportdatadict['density uncertainties (1/m2)']=d_density
             exportdatadict['mu_eff uncertainties (m2/Vs)']=d_mu_eff
             mu_eff_plus=mu_eff+d_mu_eff
             mu_eff_minus=mu_eff-d_mu_eff
             density_plus=density+d_density
             density_minus=density-d_density
+            plot_uncertainties=True
         except KeyError:
             plot_uncertainties=False
         
@@ -559,12 +654,30 @@ def run(scaling=0):
         ax[2]=fig3.add_subplot()
         if holes:
             ax[2].plot(density[:plotstart]*1e-12/1e4,mu_eff[:plotstart]*1e4,'k',label='mu_eff')
+            ax[2].errorbar(density[:plotstart]*1e-12/1e4,mu_eff[:plotstart]*1e4,xerr=d_density[:plotstart]*1e-12/1e4,yerr=d_mu_eff[:plotstart]*1e4,fmt='.',color='k',ecolor='b',label='fit uncertainty')
+            # if plot_uncertainties:
+            #     ax[2].fill_between(density_minus[:plotstart]*1e-12/1e4,mu_eff_minus[:plotstart]*1e4,mu_eff_plus[:plotstart]*1e4,alpha=1,color='gray',label='uncertainty')
+            #     ax[2].fill_between(density_plus[:plotstart]*1e-12/1e4,mu_eff_minus[:plotstart]*1e4,mu_eff_plus[:plotstart]*1e4,alpha=1,color='gray')
+            #     ax[2].fill_betweenx(mu_eff_minus[:plotstart]*1e4,density_minus[:plotstart]*1e-12/1e4,density_plus[:plotstart]*1e-12/1e4,alpha=1,color='gray')
+            #     ax[2].fill_betweenx(mu_eff_plus[:plotstart]*1e4,density_minus[:plotstart]*1e-12/1e4,density_plus[:plotstart]*1e-12/1e4,alpha=1,color='gray')
         else:
             ax[2].plot(density[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,'k',label='mu_eff')
-            #ax[2].fill_between(density[plotstart:]*1e-12/1e4,mu_eff_minus[plotstart:]*1e4,mu_eff_plus[plotstart:]*1e4,alpha=0.2,color='k',label='uncertainty')
-            #ax[2].fill_betweenx(mu_eff[plotstart:]*1e4,density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:]*1e-12/1e4,alpha=0.2,color='r')
-            ax[2].fill(np.append(density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:][::-1]*1e-12/1e4),
-                        np.append(mu_eff_minus[plotstart:]*1e4,mu_eff_plus[plotstart:][::-1]*1e4),alpha=0.2,color='r',label='uncertainty')
+            ax[2].errorbar(density[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,xerr=d_density[plotstart:]*1e-12/1e4,yerr=d_mu_eff[plotstart:]*1e4,fmt='.',color='k',ecolor='b',label='fit uncertainty')
+            #ax[2].plot(density_minus[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,'k',label='mu_eff')
+            #ax[2].plot(density_plus[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,'k',label='mu_eff')
+            #if plot_uncertainties:
+                # errorboxes=[]
+                # from matplotlib.patches import Rectangle
+                # from matplotlib.collections import PatchCollection
+                # for n_val,mu_val,n_err,mu_err in zip(density[plotstart:],mu_eff[plotstart:],d_density[plotstart:],d_mu_eff[plotstart:]):
+                #     errorboxes.append(Rectangle(((n_val-n_err)*1e-12/1e4,(mu_val-mu_err)*1e4),n_err*2e-12/1e4,mu_err*2e4))
+                # pc = PatchCollection(errorboxes,facecolor='gray',alpha=0.5,label='uncertainty')
+                # ax[2].add_collection(pc)
+                # ax[2].fill_between(density_minus[plotstart:]*1e-12/1e4,mu_eff_minus[plotstart:]*1e4,mu_eff_plus[plotstart:]*1e4,alpha=1,color='gray',label='uncertainty')
+                # ax[2].fill_between(density_plus[plotstart:]*1e-12/1e4,mu_eff_minus[plotstart:]*1e4,mu_eff_plus[plotstart:]*1e4,alpha=1,color='gray')
+                # ax[2].fill_betweenx(mu_eff_minus[plotstart:]*1e4,density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:]*1e-12/1e4,alpha=1,color='gray')
+                # ax[2].fill_betweenx(mu_eff_plus[plotstart:]*1e4,density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:]*1e-12/1e4,alpha=1,color='gray')
+        
         ax[2].set_xlabel('Carrier density x 10$^{12}$ (cm$^{-2}$)')
         ax[2].set_ylabel('Mobility (cm$^2$/(Vs))')
         ax[2].legend()
@@ -593,7 +706,7 @@ def run(scaling=0):
                                                         float(L.get()),float(c.get()),holes,findRs[Rs_initorfix.get()])
         
         paramdict['mu_FET (m2/Vs)']=mu_drude
-        #paramdict['Rs_drude (Ohm)']=Rs_drude           
+        paramdict['mu_FET uncertainty (m2/Vs)']=result_drude.params['mu'].stderr           
         set_exportparams()
         
         if holes:
@@ -607,8 +720,10 @@ def run(scaling=0):
         plotstart=(np.abs(Vg - (2*paramdict['Vth (V)']-paramdict['Vg_infl (V)']))).argmin()
         if holes:
             ax[2].plot(exportdatadict['density (1/m2)'][:plotstart]*1e-12/1e4,mu_drude_array[:plotstart]*1e4,label='mu_FET')
+            ax[2].fill_between(exportdatadict['density (1/m2)'][:plotstart]*1e-12/1e4,(mu_drude_array-result_drude.params['mu'].stderr)[:plotstart]*1e4,(mu_drude_array+result_drude.params['mu'].stderr)[:plotstart]*1e4,alpha=0.5,color='tab:blue',label='uncertainty')
         else:
             ax[2].plot(exportdatadict['density (1/m2)'][plotstart:]*1e-12/1e4,mu_drude_array[plotstart:]*1e4,label='mu_FET')
+            ax[2].fill_between(exportdatadict['density (1/m2)'][plotstart:]*1e-12/1e4,(mu_drude_array-result_drude.params['mu'].stderr)[plotstart:]*1e4,(mu_drude_array+result_drude.params['mu'].stderr)[plotstart:]*1e4,alpha=0.5,color='tab:blue',label='uncertainty')
         ax[2].legend()
         fig3.canvas.draw()
         
