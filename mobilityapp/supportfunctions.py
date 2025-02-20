@@ -136,22 +136,25 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax,holes=False):
 
     if smoothing !=0:
         G_infl=np.interp(Vg_infl, Vg, Gsmooth)
-        G_infl_uncertainty=np.interp(Vg_infl_max, Vg, Gsmooth) - np.interp(Vg_infl_min, Vg, Gsmooth)
+        G_infl_max=np.interp(Vg_infl_max, Vg, Gsmooth)
+        G_infl_min=np.interp(Vg_infl_min, Vg, Gsmooth)
     else:
         G_infl=np.interp(Vg_infl, Vg, G)#G[infl_ind]  #Value of G at the inflection point
-        G_infl_uncertainty=np.interp(Vg_infl_max, Vg, G) - np.interp(Vg_infl_min, Vg, G)
+        G_infl_max=np.interp(Vg_infl_max, Vg, G)
+        G_infl_min=np.interp(Vg_infl_min, Vg, G)
 
-    G_intercept = G_infl-infl_slope*Vg_infl  #Finding 'threshold' voltage
-    G_intercept_uncertainty = np.sqrt(G_infl_uncertainty**2 + (infl_slope_uncertainty*Vg_infl)**2 + (infl_slope*d_Vg_infl)**2)
-    Vth=-G_intercept/infl_slope
-    Vth_uncertainty = np.sqrt((G_intercept_uncertainty/infl_slope)**2 + (G_intercept*infl_slope_uncertainty/infl_slope**2)**2)
+    Vth=Vg_infl-(G_infl/infl_slope)   #The 'threshold' voltage.
+    #Calculate the uncertainty in Vth using the min and max of the dependent variables
+    Vth_min=Vg_infl_min-(G_infl_min/(infl_slope-infl_slope_uncertainty))
+    Vth_max=Vg_infl_max-(G_infl_max/(infl_slope+infl_slope_uncertainty))
+    Vth_uncertainty = np.abs(Vth_max-Vth_min)/2#np.sqrt((G_intercept_uncertainty/infl_slope)**2 + (G_intercept*infl_slope_uncertainty/infl_slope**2)**2)
+
+    V0 = Vth-2*(Vg_infl-Vth)         #Vg for which density extrapolates to zero.
+    V0_uncertainty = np.sqrt(Vth_uncertainty**2 + (2*d_Vg_infl)**2)  #Propogate as if independent, even though not strictly true. Should fix...
     
     V_Rs = Vg_infl+2*(Vg_infl-Vth)   #Vg above which we will use to calculate series resistance
     
-    inflectionline=infl_slope*Vg+G_intercept      #Draw a line tangential with the inflection point. Vg-intercept is Vth
-
-    V0 = Vth-2*(Vg_infl-Vth)         #Vg for which density extrapolates to zero.
-    V0_uncertainty = np.sqrt(Vth_uncertainty**2 + (2*d_Vg_infl)**2)
+    inflectionline=G_infl+infl_slope*(Vg-Vg_infl)      #Draw a line tangential with the inflection point. Vg-intercept is Vth
 
     return V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result,uncertainties,V0_uncertainty,Vth_uncertainty,d_Vg_infl
 

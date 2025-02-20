@@ -185,21 +185,20 @@ def run(scaling=0):
 
     c_entry=Entry(geomframe,textvariable=c,width=entrywidth)
     c_entry.grid(row=1,column=1)
+    d_C_entry=Entry(geomframe,textvariable=d_C,width=entrywidth)
+    d_C_entry.grid(row=1,column=3)
     L_entry=Entry(geomframe,textvariable=L,width=entrywidth)
     L_entry.grid(row=2,column=1)
+    d_L_entry=Entry(geomframe,textvariable=d_L,width=entrywidth)
+    d_L_entry.grid(row=2,column=3)
     W_entry=Entry(geomframe,textvariable=W,width=entrywidth)
     W_entry.grid(row=3,column=1)
+    d_W_entry=Entry(geomframe,textvariable=d_W,width=entrywidth)
+    d_W_entry.grid(row=3,column=3)
 
     Label(geomframe,text='+/-').grid(row=1,column=2)
     Label(geomframe,text='+/-').grid(row=2,column=2)
     Label(geomframe,text='+/-').grid(row=3,column=2)
-
-    d_C_entry=Entry(geomframe,textvariable=d_C,width=entrywidth)
-    d_C_entry.grid(row=1,column=3)
-    d_L_entry=Entry(geomframe,textvariable=d_L,width=entrywidth)
-    d_L_entry.grid(row=2,column=3)
-    d_W_entry=Entry(geomframe,textvariable=d_W,width=entrywidth)
-    d_W_entry.grid(row=3,column=3)
 
     Label(geomframe, text='(F)').grid(row=1,column=4,sticky='W')
     Label(geomframe, text='(m)').grid(row=2,column=4,sticky='W')
@@ -237,10 +236,10 @@ def run(scaling=0):
     Rsdropmenu.grid(row=2,sticky='E')
     initmulabel=Label(guessframe, text='Initial mu')
     initmulabel.grid(row=1,sticky='E')
-    initRs_entry=Entry(guessframe,textvariable=initial_Rs,width=entrywidth)
-    initRs_entry.grid(row=2,column=1)
     initmu_entry=Entry(guessframe,textvariable=initial_mu,width=entrywidth)
     initmu_entry.grid(row=1,column=1)
+    initRs_entry=Entry(guessframe,textvariable=initial_Rs,width=entrywidth)
+    initRs_entry.grid(row=2,column=1)
     Rs_error_label=Label(guessframe,text='Rs uncertainty')
     Rs_error_label.grid(row=3,column=0,sticky='E')
     Rs_error_entry=Entry(guessframe,textvariable=Rs_error,width=entrywidth)
@@ -654,29 +653,23 @@ def run(scaling=0):
         ax[2]=fig3.add_subplot()
         if holes:
             ax[2].plot(density[:plotstart]*1e-12/1e4,mu_eff[:plotstart]*1e4,'k',label='mu_eff')
-            ax[2].errorbar(density[:plotstart]*1e-12/1e4,mu_eff[:plotstart]*1e4,xerr=d_density[:plotstart]*1e-12/1e4,yerr=d_mu_eff[:plotstart]*1e4,fmt='.',color='k',ecolor='b',label='fit uncertainty')
-            # if plot_uncertainties:
-            #     ax[2].fill_between(density_minus[:plotstart]*1e-12/1e4,mu_eff_minus[:plotstart]*1e4,mu_eff_plus[:plotstart]*1e4,alpha=1,color='gray',label='uncertainty')
-            #     ax[2].fill_between(density_plus[:plotstart]*1e-12/1e4,mu_eff_minus[:plotstart]*1e4,mu_eff_plus[:plotstart]*1e4,alpha=1,color='gray')
-            #     ax[2].fill_betweenx(mu_eff_minus[:plotstart]*1e4,density_minus[:plotstart]*1e-12/1e4,density_plus[:plotstart]*1e-12/1e4,alpha=1,color='gray')
-            #     ax[2].fill_betweenx(mu_eff_plus[:plotstart]*1e4,density_minus[:plotstart]*1e-12/1e4,density_plus[:plotstart]*1e-12/1e4,alpha=1,color='gray')
+            if plot_uncertainties:
+                ax[2].fill_between(density_minus[:plotstart]*1e-12/1e4,mu_eff_minus[:plotstart]*1e4,mu_eff_plus[:plotstart]*1e4,alpha=1,color='gray',label='uncertainty')
+                ax[2].fill_between(density_plus[:plotstart]*1e-12/1e4,mu_eff_minus[:plotstart]*1e4,mu_eff_plus[:plotstart]*1e4,alpha=1,color='gray')
+                ax[2].fill_betweenx(mu_eff_minus[:plotstart]*1e4,density_minus[:plotstart]*1e-12/1e4,density_plus[:plotstart]*1e-12/1e4,alpha=1,color='gray')
+                ax[2].fill_betweenx(mu_eff_plus[:plotstart]*1e4,density_minus[:plotstart]*1e-12/1e4,density_plus[:plotstart]*1e-12/1e4,alpha=1,color='gray')
+                ax[2].fill_between(density[:plotstart]*1e-12/1e4,(mu_eff-d_mu_eff)[:plotstart]*1e4,(mu_eff+d_mu_eff)[:plotstart]*1e4,alpha=1,color='gray')
+                ax[2].fill_betweenx(mu_eff[:plotstart]*1e4,density_minus[:plotstart]*1e-12/1e4,density_plus[:plotstart]*1e-12/1e4,alpha=1,color='gray')
         else:
             ax[2].plot(density[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,'k',label='mu_eff')
-            ax[2].errorbar(density[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,xerr=d_density[plotstart:]*1e-12/1e4,yerr=d_mu_eff[plotstart:]*1e4,fmt='.',color='k',ecolor='b',label='fit uncertainty')
-            #ax[2].plot(density_minus[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,'k',label='mu_eff')
-            #ax[2].plot(density_plus[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,'k',label='mu_eff')
-            #if plot_uncertainties:
-                # errorboxes=[]
-                # from matplotlib.patches import Rectangle
-                # from matplotlib.collections import PatchCollection
-                # for n_val,mu_val,n_err,mu_err in zip(density[plotstart:],mu_eff[plotstart:],d_density[plotstart:],d_mu_eff[plotstart:]):
-                #     errorboxes.append(Rectangle(((n_val-n_err)*1e-12/1e4,(mu_val-mu_err)*1e4),n_err*2e-12/1e4,mu_err*2e4))
-                # pc = PatchCollection(errorboxes,facecolor='gray',alpha=0.5,label='uncertainty')
-                # ax[2].add_collection(pc)
-                # ax[2].fill_between(density_minus[plotstart:]*1e-12/1e4,mu_eff_minus[plotstart:]*1e4,mu_eff_plus[plotstart:]*1e4,alpha=1,color='gray',label='uncertainty')
-                # ax[2].fill_between(density_plus[plotstart:]*1e-12/1e4,mu_eff_minus[plotstart:]*1e4,mu_eff_plus[plotstart:]*1e4,alpha=1,color='gray')
-                # ax[2].fill_betweenx(mu_eff_minus[plotstart:]*1e4,density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:]*1e-12/1e4,alpha=1,color='gray')
-                # ax[2].fill_betweenx(mu_eff_plus[plotstart:]*1e4,density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:]*1e-12/1e4,alpha=1,color='gray')
+            if plot_uncertainties:
+                # Would obviously be most accurate to plot just the errorbars, but it looks horrible in matplotlib. This is the simplest (but dumbest) way to make it look good while being sure of covering all uncertainties.
+                ax[2].fill_between(density_minus[plotstart:]*1e-12/1e4,mu_eff_minus[plotstart:]*1e4,mu_eff_plus[plotstart:]*1e4,alpha=1,color='gray',label='uncertainty')
+                ax[2].fill_between(density_plus[plotstart:]*1e-12/1e4,mu_eff_minus[plotstart:]*1e4,mu_eff_plus[plotstart:]*1e4,alpha=1,color='gray')
+                ax[2].fill_betweenx(mu_eff_minus[plotstart:]*1e4,density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:]*1e-12/1e4,alpha=1,color='gray')
+                ax[2].fill_betweenx(mu_eff_plus[plotstart:]*1e4,density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:]*1e-12/1e4,alpha=1,color='gray')
+                ax[2].fill_between(density[plotstart:]*1e-12/1e4,(mu_eff-d_mu_eff)[plotstart:]*1e4,(mu_eff+d_mu_eff)[plotstart:]*1e4,alpha=1,color='gray')
+                ax[2].fill_betweenx(mu_eff[plotstart:]*1e4,density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:]*1e-12/1e4,alpha=1,color='gray')
         
         ax[2].set_xlabel('Carrier density x 10$^{12}$ (cm$^{-2}$)')
         ax[2].set_ylabel('Mobility (cm$^2$/(Vs))')
@@ -742,7 +735,7 @@ def run(scaling=0):
 
 
     ### Export frame, including scrollable windows of the produced data and parameters
-    exportframe = ttk.Frame(root, padding='3 25 12 3')
+    exportframe = ttk.Frame(root, padding='3 15 12 3')
     exportframe.grid(column=2,row=1,sticky='N')
     def export_data():
         jsonexportdata={}
@@ -803,7 +796,7 @@ def run(scaling=0):
             paramcopy+=param+': '+str(paramdict[param])+'\n'
         root.clipboard_append(str(paramcopy))
     Button(exportframe, text='Copy params', command=copy_params).grid(row=0,column=4,columnspan=2)
-    databox=Listbox(exportframe,listvariable=(exportdatavar),height=12,width=38)
+    databox=Listbox(exportframe,listvariable=(exportdatavar),height=14,width=38)
     databox.grid(column=0,row=1,columnspan=2,sticky=('N W E S'))
     s1 = ttk.Scrollbar(exportframe, orient=VERTICAL, command=databox.yview)
     s1.grid(column=2,row=1,sticky=('N S'))
@@ -811,7 +804,7 @@ def run(scaling=0):
     s2 = ttk.Scrollbar(exportframe, orient=HORIZONTAL, command=databox.xview)
     s2.grid(column=0,row=2,columnspan=2,sticky=('W E'))
     databox['xscrollcommand'] = s2.set
-    parambox=Listbox(exportframe,listvariable=(exportparamsvar),height=12,width=30)
+    parambox=Listbox(exportframe,listvariable=(exportparamsvar),height=14,width=30)
     parambox.grid(column=3,row=1,columnspan=2,sticky=('N W E S'))
     s3 = ttk.Scrollbar(exportframe, orient=VERTICAL, command=parambox.yview)
     s3.grid(column=5,row=1,sticky=('N S'))
