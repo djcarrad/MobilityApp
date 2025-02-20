@@ -2,7 +2,15 @@ MobilityApp
 ===================================
 Python-based tool to analyse conductance vs gate voltage data and extract mobility and density.
 
-See below for background and instructions on use.
+This application provides access to the methods described in this paper: EVENTUAL LINK
+
+In short; for any FET-like device, conductance, G, vs gate voltage, Vg, data can be transformed into 
+mobility vs density data, assuming that scattering at low density is dominated by random impurities.
+The key is to find V0, the gate voltage at which the density tends towards zero; this process is at
+the core of the app/code. In general, we do it by taking the derivative of G(Vg), finding the peak
+co-ordinates, and using this information to extrapolate to an approximate V0. We then fit G(Vg) at
+large Vg to find the series resistance in the circuit. Finally, you, the user need to input the 
+geometric properties of the device, and the app will return mobility and density.
 
 Questions/assistance: Damon Carrad, damonc@dtu.dk or Christian Petersen cenpe@dtu.dk
 
@@ -15,17 +23,19 @@ There are three options for installing, from easiest/most limited to hardest/gre
 
 1. GUI only (Windows only)
 -----------------------------------
-If you are on windows and only want to use the GUI, the easiest thing is to download 'mobilityapp.exe' from the file list above.
+If you are on windows and only want to use the GUI, you can download 'mobilityapp.exe' from the file list above.
 
 
 
 2. GUI plus modules in python (all systems*)
 -----------------------------------
-If you need to embed the functions for calculating mobility within your own python code (e.g. automated analysis of large numbers of data sets), and/or prefer running the GUI from within your own python installation, simply use:
+If you need to embed the functions for calculating mobility within your own python code 
+(e.g. automated analysis of large numbers of data sets), and/or prefer running the GUI from 
+within your own python installation, you can install from pip:
 
     pip install mobilityapp
 
-To run the GUI, simply run from the command line:
+To run the GUI, run from e.g. Anaconda Prompt:
 
     mobilityapp
 
@@ -36,7 +46,6 @@ To rescale/resize the GUI to better fit your screen, you can specify a multiplie
 The 'examples' Jupyter notebook runs through how to use each module of the MobilityApp. If Jupyter isn't already installed:
 
     pip install jupyterlab
-
 
 
 3. Editable installation (all systems*)
@@ -69,25 +78,19 @@ The GUI can be run from Anaconda Prompt with:
 
 Using the app:
 ===================================
-This application provides access to the methods described in this paper: EVENTUAL LINK
-
-In short; for any FET-like device, conductance, G, vs gate voltage, Vg, data can be transformed into 
-mobility vs density data, assuming that scattering at low density is dominated by random impurities.
-The key is to find V0, the gate voltage at which the density tends towards zero; this process is at
-the core of the app/code. In general, we do it by taking the derivative of G(Vg), finding the peak
-co-ordinates, and using this information to extrapolate to an approximate V0. We then fit G(Vg) at
-large Vg to find the series resistance in the circuit. Finally, you, the user need to input the 
-geometric properties of the device, and the app will return mobility and density.
 
 Loading data
 -----------------------------------
 Currently only datasets compatible with numpy.loadtxt are supported; but these are most datasets.
-Basically, if you can load it into Excel, you can load it into this app. If you have a fancy database
-or something like that, you will have to reshape it into something that can be loaded into Excel.
+Basically, if you can load it into Excel, you can probably load it into this app.
 
 The app is flexible towards data being measured in siemens or units of the conductance quantum.
 If you only have current data (recorded in ampere) this is also fine; you just need to provide the
 source-drain voltage V_sd used.
+
+Importantly! For the procedure to work accurately, the G(Vg) measurement should be performed to sufficently low 
+voltages -- i.e. below the threshold voltage -- and also sufficiently high voltages -- such that an accurate
+value of series resistance can be obtained.
 
 Fitting the derivative
 -----------------------------------
@@ -100,20 +103,21 @@ coordinates are relevant! Therefore, it doesn't matter too much if the fit is po
 long as the fitting procedure finds the co-ordinates accurately, it's all good. But please check it's 
 done a good job!! If it hasn't done a good job, play with the parameters until it does. If you really
 give up, but it's super obvious where the peak is (the human eye is a really good fitting tool), 
-just write the values manually below the plot.
+just write the values manually below the plot. However, it's not clear what the uncertainties should 
+be in this case, so if you manually declaring the peak co-ordinates, the uncertainties in mobility and density are not calculated.
 
 Exported data
 ------------------------------------
 The data can be exported either as a json database (most useful if you want to re-import to python),
 or csv (most useful for re-import into other plotting programs). Since some of the data is processed
-over a restricted range of V_g, the dataset is irregular.
+over a restricted range of V_g, the dataset is irregular (hence _not_ using numpy.savetxt)
 
 
 Using the python code
 ====================================
 The main advantages of using the jupyter notebook code are batch processing large numbers of datasets,
 and troubleshooting. The notebook also allows you access to the full lmfit fit reports for each of the
-fits, if uncertainty reporting and processing is necessary. I hope the example notebook contains
+fits, if further uncertainty reporting and processing is necessary. We hope the example notebook contains
 enough comments to make usage clear enough, otherwise please reach out to us, damonc@dtu.dk or 
 cenpe@dtu.dk
 
