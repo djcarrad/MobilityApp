@@ -115,17 +115,17 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax,holes=False):
     deriv_fit = model(result.params, Vg)
     deriv_fitfine = model(result.params, Vgfine)
     
-    uncertainties=compute_asym_uncertainties(result, Vg) #Compute the uncertainty in the fit to dGdVg as a function of Vg
-    uncertainties_fine=compute_asym_uncertainties(result, Vgfine)
+    fit_uncertainties=compute_asym_uncertainties(result, Vg) #Compute the uncertainty in the fit to dGdVg as a function of Vg
+    fit_uncertainties_fine=compute_asym_uncertainties(result, Vgfine)
 
     infl_slope=deriv_fitfine.max()    #Slope in G(Vg) at the inflection point is simply the maximum of the derivative
     infl_ind=deriv_fitfine.argmax()   #Array index where inflection point occurs
-    infl_slope_uncertainty=uncertainties_fine[infl_ind]     #Uncertainty in the slope
+    infl_slope_uncertainty=fit_uncertainties_fine[infl_ind]     #Uncertainty in the slope
     
     if holes: #Since we flipped the derivative data earlier, we need to reverse everything.
         infl_slope=-infl_slope
         deriv_fit=-deriv_fit[::-1]
-        uncertainties=-uncertainties[::-1]
+        fit_uncertainties=-fit_uncertainties[::-1]
         Vg_infl=Vgfine[-infl_ind]             #Value of Vg at the inflection point
         Vg_infl_min=Vgfine[-infl_ind] + d_Vg_infl
         Vg_infl_max=Vgfine[-infl_ind] - d_Vg_infl
@@ -147,16 +147,17 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax,holes=False):
     #Calculate the uncertainty in Vth using the min and max of the dependent variables
     Vth_min=Vg_infl_min-(G_infl_min/(infl_slope-infl_slope_uncertainty))
     Vth_max=Vg_infl_max-(G_infl_max/(infl_slope+infl_slope_uncertainty))
-    Vth_uncertainty = np.abs(Vth_max-Vth_min)/2#np.sqrt((G_intercept_uncertainty/infl_slope)**2 + (G_intercept*infl_slope_uncertainty/infl_slope**2)**2)
+    Vth_uncertainty = np.abs(Vth_max-Vth_min)/2
 
     V0 = Vth-2*(Vg_infl-Vth)         #Vg for which density extrapolates to zero.
-    V0_uncertainty = np.sqrt(Vth_uncertainty**2 + (2*d_Vg_infl)**2)  #Propogate as if independent, even though not strictly true. Should fix...
-    
+    #V0_uncertainty = np.sqrt(Vth_uncertainty**2 + (2*d_Vg_infl)**2)  # Propogate as if independent, which isn't strictly true.
+    V0_uncertainty = Vth_uncertainty + 2*d_Vg_infl   # A better estimate of the uncertainty is probably just to add the two contributing uncertainties in proportion.
+
     V_Rs = Vg_infl+2*(Vg_infl-Vth)   #Vg above which we will use to calculate series resistance
     
     inflectionline=G_infl+infl_slope*(Vg-Vg_infl)      #Draw a line tangential with the inflection point. Vg-intercept is Vth
 
-    return V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result,uncertainties,V0_uncertainty,Vth_uncertainty,d_Vg_infl
+    return V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result,fit_uncertainties,V0_uncertainty,Vth_uncertainty,d_Vg_infl
 
 def compute_asym_uncertainties(result, Vg):
     # To propogate uncertainties, need to have partial derivatives of the model with respect to the parameters.
@@ -186,7 +187,7 @@ def compute_asym_uncertainties(result, Vg):
 
     return d_F
 
-def compute_mu_uncertainty(Vg,G,L,C,CperA,V0,Rs,d_L,d_C,d_CperA,d_V0,d_Rs,holes=False):
+def compute_mu_uncertainties(Vg,G,L,C,CperA,V0,Rs,d_L,d_C,d_CperA,d_V0,d_Rs,holes=False):
     def f_L(Vg,G,L,C,V0,Rs,holes):
         if not holes:
             return 2*L/(C*(Rs + 1/G)*(-V0 + Vg))
@@ -292,8 +293,8 @@ def perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,c,holes=False,findRs=True
     
     return mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude
 
-def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initial_mu,
-                             holes=False,plotting=True,findRs=True):
+def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,d_L,C,d_C,CperA,d_CperA,initial_Rs,initial_mu,
+                             holes=False,plotting=True,findRs=True,d_Rs=None):
 
     datadict={}
     paramdict={}
@@ -308,23 +309,29 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
         Gsmooth=savgol_filter(G, int(G.shape[0]*smoothing), 5, deriv=0, delta=1.0, axis=-1, mode='interp', cval=0.0)
         dGdVg = np.gradient(Gsmooth, Vg)
     else:
-        Gmooth=0 #Necessary later because I'm not a good developer, sorry
+        Gsmooth=0 #Necessary later because I'm not a good developer, sorry
         dGdVg = np.gradient(G, Vg)
     datadict['dGdVg (S/V)']=dGdVg
 
-    V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit=perform_deriv_fit(Vg,G,
+    (V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit,
+    fit_uncertainties,V0_uncertainty,Vth_uncertainty,d_Vg_infl)=perform_deriv_fit(Vg,G,
                                                                                     dGdVg,Gsmooth,smoothing,
                                                                                     Vmin=Vmin,Vmax=Vmax,
                                                                                     holes=holes)
     datadict['dGdVg fit (S/V)']=deriv_fit
+    datadict['dGdVg fit uncertainties (S/V)']=fit_uncertainties
     datadict['Inflection fit (S)']=inflectionline
     paramdict['V0 (V)']=V0
+    paramdict['V0 uncertainty (V)']=V0_uncertainty
     paramdict['Vth (V)']=Vth
+    paramdict['Vth uncertainty (V)']=Vth_uncertainty
     paramdict['Vg_infl (V)']=Vg_infl
+    paramdict['Vg_infl uncertainty (V)']=d_Vg_infl
     paramdict['V_Rs (V)']=V_Rs
         
     if findRs==False:
         Rs=initial_Rs
+        d_Rs=d_Rs
     elif findRs==True:
         Rs,Rs_fit,V_Rs_ind,result_drudeRs=perform_Rs_fit(Vg,G,V0,V_Rs,initial_Rs,initial_mu,L,C,holes)
         if holes:
@@ -332,9 +339,11 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
         else:
             datadict['Vg for Rs fit (V)']=Vg[V_Rs_ind:]
         datadict['Rs fit (S)']=Rs_fit
+        d_Rs=result_drudeRs.params['Rs'].stderr
     else:
         raise ValueError('findRs must be True or False')
     paramdict['Rs (Ohm)']=Rs
+    paramdict['Rs uncertainty (Ohm)']=d_Rs
     
     if holes:
         density=CperA*(V0-Vg)/1.602176634e-19
@@ -342,14 +351,17 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
     else:
         density=CperA*(Vg-V0)/1.602176634e-19
         mu_eff=L**2/(C*(Vg-V0)*((1/G)-Rs))
+    d_mu_eff,d_density = compute_mu_uncertainties(Vg,G,L,C,CperA,V0,Rs,d_L,d_C,d_CperA,V0_uncertainty,d_Rs,holes)
     datadict['density (1/m2)']=density
     datadict['mu_eff (m2/Vs)']=mu_eff
+    datadict['density uncertainties (1/m2)']=d_density
+    datadict['mu_eff uncertainties (m2/Vs)']=d_mu_eff
 
     mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude=perform_drude_fit(Vg,G,Vth,
                                                                        initial_Rs,initial_mu,
                                                                        L,C,holes,findRs)
     paramdict['mu_FET (m2/Vs)']=mu_drude
-    #paramdict['Rs_drude (Ohm)']=Rs_drude
+    paramdict['mu_FET uncertainty (m2/vs)']=result_drude.params['mu'].stderr
     if holes:
         datadict['Vg for mu_FET fit (V)']=Vg[:Vth_ind]
     else:
@@ -357,7 +369,7 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
     datadict['mu_FET fit (S)']=drude_fit
     
     if plotting==True:
-        plt.plot(Vg,G,label='data')
+        plt.plot(Vg,G,label='data',color='k')
         plt.plot(Vg,inflectionline,label='inflection')
         if holes:
             if findRs==True:
@@ -373,20 +385,30 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,C,CperA,initial_Rs,initi
         plt.legend()
         plt.show()
 
-        plt.plot(Vg,dGdVg)
-        plt.plot(Vg,deriv_fit)
+        plt.plot(Vg,dGdVg,color='k',label='data')
+        plt.plot(Vg,deriv_fit,'tab:blue',label='fit')
+        plt.fill_between(Vg,deriv_fit-fit_uncertainties,deriv_fit+fit_uncertainties,color='tab:blue',alpha=0.8,label='uncertainty')
         plt.xlabel('Vg (V)')
         plt.ylabel('$dG/dVg$ (S/V)')
+        plt.legend()
         plt.show()
         
         mu_drude_array=np.full(Vg.shape[0],mu_drude)
         plotstart=(np.abs(Vg - (2*Vth-Vg_infl))).argmin()
         if holes:
-            plt.plot(density[:plotstart]*1e-12/1e4,mu_eff[:plotstart]*1e4,label='mu_eff')
-            plt.plot(density[:plotstart]*1e-12/1e4,mu_drude_array[:plotstart]*1e4,label='mu_drude')
+            plt.errorbar(density[:plotstart]*1e-12/1e4,mu_eff[:plotstart]*1e4,xerr=d_density[:plotstart]*1e-12/1e4,
+                        yerr=d_mu_eff[:plotstart]*1e4,color='k',ecolor='gray',label='mu_eff')
+            plt.plot(density[:plotstart]*1e-12/1e4,mu_drude_array[:plotstart]*1e4,label='mu_FET')
+            plt.fill_between(density[:plotstart]*1e-12/1e4,(mu_drude_array[:plotstart]-result_drude.params['mu'].stderr)*1e4,
+                            (mu_drude_array[:plotstart]+result_drude.params['mu'].stderr)*1e4,
+                            alpha=0.5,color='tab:blue',label='mu_FET uncertainty')
         else:
-            plt.plot(density[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,label='mu_eff')
-            plt.plot(density[plotstart:]*1e-12/1e4,mu_drude_array[plotstart:]*1e4,label='mu_drude')
+            plt.errorbar(density[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,xerr=d_density[plotstart:]*1e-12/1e4,
+                        yerr=d_mu_eff[plotstart:]*1e4,color='k',ecolor='gray',label='mu_eff')
+            plt.plot(density[plotstart:]*1e-12/1e4,mu_drude_array[plotstart:]*1e4,label='mu_FET')
+            plt.fill_between(density[plotstart:]*1e-12/1e4,(mu_drude_array[plotstart:]-result_drude.params['mu'].stderr)*1e4,
+                            (mu_drude_array[plotstart:]+result_drude.params['mu'].stderr)*1e4,
+                            alpha=0.5,color='tab:blue',label='mu_FET uncertainty')
         plt.xlabel('Carrier density x 10$^{12}$ (cm$^{-2}$)')
         plt.ylabel('Mobility (cm$^2$/(Vs))')
         plt.legend()

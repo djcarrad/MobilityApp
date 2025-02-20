@@ -384,9 +384,6 @@ def run(scaling=0):
             
         fig2.clf()
         ax[1]=fig2.add_subplot()
-        # if holes:
-        #     ax[1].plot(Vg,dGdVg*1e3,'k',label='data')
-        # else:
         ax[1].plot(Vg,dGdVg*1e3,'k',label='data')
         ax[1].set_xlabel('Gate voltage (V)')
         ax[1].set_ylabel(f'$dG/dV_g$ (mS/V)')
@@ -399,9 +396,11 @@ def run(scaling=0):
             ax[1].set_xlim([ax[1].get_xlim()[0],float(Vmax.get())])
         fig2.tight_layout()
         fig2.canvas.draw()
-            
-        # try:
-        V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit,uncertainties,V0_uncertainty,Vth_uncertainty,d_Vg_infl=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin=Vmin.get(),Vmax=Vmax.get(),holes=holes)
+
+        (V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit,
+        fit_uncertainties,V0_uncertainty,Vth_uncertainty,d_Vg_infl)=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,
+                                                                                      Vmin=Vmin.get(),Vmax=Vmax.get(),
+                                                                                      holes=holes)
         paramdict['V0 (V)']=V0
         paramdict['V0 uncertainty (V)']=V0_uncertainty
         paramdict['Vth (V)']=Vth
@@ -413,15 +412,12 @@ def run(scaling=0):
         set_exportparams()
         
         exportdatadict['dGdVg fit (S/V)']=deriv_fit
-        exportdatadict['dGdVg fit uncertainties (S/V)']=uncertainties
+        exportdatadict['dGdVg fit uncertainties (S/V)']=fit_uncertainties
         exportdatadict['Inflection fit (S)']=inflectionline
         set_exportdata()
-        # if holes:
-        #     ax[1].plot(Vg,-deriv_fit[::-1]*1e3,label='fit')
-        # else:
-        #ax[1].errorbar(Vg,deriv_fit*1e3,yerr=uncertainties*1e3,fmt='-',alpha=0.2,label='fit uncertainty')
+
         ax[1].plot(Vg,deriv_fit*1e3,label='fit')
-        ax[1].fill_between(Vg,(deriv_fit-uncertainties)*1e3,(deriv_fit+uncertainties)*1e3,alpha=0.8,color='tab:blue',label='fit uncertainty')
+        ax[1].fill_between(Vg,(deriv_fit-fit_uncertainties)*1e3,(deriv_fit+fit_uncertainties)*1e3,alpha=0.8,color='tab:blue',label='fit uncertainty')
         ax[1].legend()
         fig2.canvas.draw()
         if GorI.get()=='G provided':
@@ -432,12 +428,7 @@ def run(scaling=0):
         ax[0].plot(Vg,inflectionline,label='slope at inflection')
         ax[0].legend()
         fig1.canvas.draw()
-        # except Exception as e:
-        #     print(e)
-        #     fig2.clf()
-        #     canvas = FigureCanvasTkAgg(fig2, master=derivframe)  # A tk.DrawingArea.
-        #     canvas.draw()
-        #     canvas.get_tk_widget().grid(row=1,columnspan=11)
+
         
     def clear_deriv():
         fig2.clf()
@@ -617,11 +608,11 @@ def run(scaling=0):
             W_val=float(W.get())
             d_W_val=float(d_W.get())
             Cperarea=c_val/(L_val*W_val)
-            d_Cperarea=np.sqrt((d_C_val/(L_val*W_val))**2+(c_val*d_L_val/(L_val**2*W_val))**2+(c_val*d_W_val/(L_val*W_val**2))**2)
+            d_Cperarea=np.sqrt((d_C_val/c_val)**2+(d_L_val/L_val)**2+(d_W_val/W_val)**2)*Cperarea
         else:
             Cperarea=float(W.get())
             d_Cperarea=float(d_W.get())
-        #density=float(c.get())*(Vg-paramdict['V0 (V)'])/(float(L.get())*float(W.get())*1.6e-19)
+
         if holes:
             density=Cperarea*(paramdict['V0 (V)']-Vg)/1.602176634e-19
             mu_eff=float(L.get())**2/(float(c.get())*(paramdict['V0 (V)']-Vg)*((1/G)-Rs))
@@ -636,7 +627,7 @@ def run(scaling=0):
             d_V0=paramdict['V0 uncertainty (V)']
             d_L_val=float(d_L.get())
             d_C_val=float(d_C.get())
-            d_mu_eff,d_density = compute_mu_uncertainty(Vg,G,float(L.get()),float(c.get()),Cperarea,paramdict['V0 (V)'],Rs,d_L_val,d_C_val,d_Cperarea,d_V0,Rs_uncertainty,holes)
+            d_mu_eff,d_density = compute_mu_uncertainties(Vg,G,float(L.get()),float(c.get()),Cperarea,paramdict['V0 (V)'],Rs,d_L_val,d_C_val,d_Cperarea,d_V0,Rs_uncertainty,holes)
             exportdatadict['density uncertainties (1/m2)']=d_density
             exportdatadict['mu_eff uncertainties (m2/Vs)']=d_mu_eff
             mu_eff_plus=mu_eff+d_mu_eff
@@ -779,7 +770,7 @@ def run(scaling=0):
     copydatabutton.grid(row=0,column=1,sticky='W')
     def export_params():
         filename = tk.filedialog.asksaveasfilename(title='Select file name and type.',
-                                                defaultextension='.json',filetypes=[('JSON (*.json)','*.json'),('Comma separated values (*.csv)','*.csv')])
+                                                defaultextension='.json',filetypes=[('JSON (*.json)','*.json'),('CSV (*.csv)','*.csv')])
         if '.json' in filename:
             with open(filename, 'w', encoding='utf-8') as f:
                 json.dump(paramdict, f, ensure_ascii=False, indent=4)
@@ -812,22 +803,5 @@ def run(scaling=0):
     s3 = ttk.Scrollbar(exportframe, orient=HORIZONTAL, command=parambox.xview)
     s3.grid(column=3,row=2,columnspan=2,sticky=('W E'))
     parambox['xscrollcommand'] = s3.set
-
-    # resizeframe=ttk.Frame(exportframe)
-    # resizeframe.grid(column=0,row=3,columnspan=6,sticky='E')
-    # resizedict={'50%':0.5,'75%':0.75,'100%':1,
-    #             '150%':1.5,'200%':2, '250%':2.5, '300%':3}
-    # resizeoptions=list(resizedict.keys())
-    # resizevar=StringVar()
-    # resizevar.set('100%')
-
-    # def resizewindow(val,root):
-    #     print(val,resizedict[val],root)
-    #     root.tk.call('tk', 'scaling', resizedict[val])
-
-    # resizeoptionmenu=OptionMenu(resizeframe,resizevar,*resizeoptions,
-    #                             command=partial(resizewindow,root=root))
-    # resizeoptionmenu.grid(row=0,column=1)
-    # Label(resizeframe,text='Window size').grid(row=0,column=0)
 
     root.mainloop()
