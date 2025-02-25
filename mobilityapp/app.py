@@ -48,6 +48,315 @@ def run(scaling=0):
     def key_deleter(dict,key):
         if key in dict:
             del dict[key]
+
+    def plot_data(*args):
+        fig1.clf()
+        Vg,G,holes=VgandG(convertunits=False)
+        
+        exportdatadict['Vg (V)']=Vg
+        exportdatadict['G (S)']=G
+        set_exportdata()
+            
+        ax[0]=fig1.add_subplot()
+        ax[0].plot(Vg,G,'k',label='data')
+        ax[0].set_xlabel('Gate voltage (V)')
+        if GorI.get()=='I provided':
+            ax[0].set_ylabel('Conductance (S)')
+        else:
+            ax[0].set_ylabel(f'Conductance ({Gunits.get()})')
+        ax[0].set_ylim([G.min()-(G.max()-G.min())/10,G.max()+(G.max()-G.min())/10])
+        
+        fig1.tight_layout()
+        ax[0].legend()
+        fig1.canvas.draw()
+        
+    def clear_plot():
+        fig1.clf()
+        fig1.canvas.draw()
+
+    def plot_deriv():
+        #First do the analysis
+        Vg,G,holes=VgandG(convertunits=True)
+        
+        #Range over which to smooth, as a percentage of the data range
+        smoothing=float(smoothingbut.get())/100
+        
+        if smoothing!=0:
+            Gsmooth=savgol_filter(G, int(G.shape[0]*smoothing), 5, deriv=0, delta=1.0, axis=-1, mode='interp', cval=0.0)
+            dGdVg = np.gradient(Gsmooth, Vg)
+        else:
+            Gsmooth=0
+            dGdVg = np.gradient(G, Vg)
+
+        exportdatadict['dGdVg (S/V)']=dGdVg
+        set_exportdata()
+            
+        fig2.clf()
+        ax[1]=fig2.add_subplot()
+        ax[1].plot(Vg,dGdVg*1e3,'k',label='data')
+        ax[1].set_xlabel('Gate voltage (V)')
+        ax[1].set_ylabel(f'$dG/dV_g$ (mS/V)')
+        ax[1].legend()
+        if Vmin.get()!='Min' and Vmax.get()!='Max':
+            ax[1].set_xlim([float(Vmin.get()),float(Vmax.get())])
+        elif Vmin.get()!='Min':
+            ax[1].set_xlim([float(Vmin.get()),ax[1].get_xlim()[1]])
+        elif Vmax.get()!='Max':
+            ax[1].set_xlim([ax[1].get_xlim()[0],float(Vmax.get())])
+        fig2.tight_layout()
+        fig2.canvas.draw()
+
+        (V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit,
+        fit_uncertainties,V0_uncertainty,Vth_uncertainty,d_Vg_infl)=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,
+                                                                                      Vmin=Vmin.get(),Vmax=Vmax.get(),
+                                                                                      holes=holes)
+        paramdict['V0 (V)']=V0
+        paramdict['V0 uncertainty (V)']=V0_uncertainty
+        paramdict['Vth (V)']=Vth
+        paramdict['Vth uncertainty (V)']=Vth_uncertainty
+        paramdict['Vg_infl (V)']=Vg_infl
+        paramdict['Vg_infl uncertainty (V)']=d_Vg_infl
+        paramdict['V_Rs (V)']=V_Rs
+                                
+        set_exportparams()
+        
+        exportdatadict['dGdVg fit (S/V)']=deriv_fit
+        exportdatadict['dGdVg fit uncertainties (S/V)']=fit_uncertainties
+        exportdatadict['Inflection fit (S)']=inflectionline
+        set_exportdata()
+
+        ax[1].plot(Vg,deriv_fit*1e3,label='fit')
+        ax[1].fill_between(Vg,(deriv_fit-fit_uncertainties)*1e3,(deriv_fit+fit_uncertainties)*1e3,alpha=0.8,color='tab:blue',label='fit uncertainty')
+        ax[1].legend()
+        fig2.canvas.draw()
+        if GorI.get()=='G provided':
+            if Gunits.get()=='2e2/h':
+                inflectionline=inflectionline/7.748091729e-5
+            elif Gunits.get()=='e2/h':
+                inflectionline=inflectionline/7.748091729e-5*2
+        ax[0].plot(Vg,inflectionline,label='slope at inflection')
+        ax[0].legend()
+        fig1.canvas.draw()
+
+    def plot_manual_inflection():
+        Vg,G,holes=VgandG(convertunits=True)
+        
+        #Range over which to smooth, as a percentage of the data range
+        smoothing=float(smoothingbut.get())/100
+        
+        if smoothing!=0:
+            Gsmooth=savgol_filter(G, int(G.shape[0]*smoothing), 5, deriv=0, delta=1.0, axis=-1, mode='interp', cval=0.0)
+        else:
+            Gsmooth=0
+
+        V0,Vth,V_Rs,inflectionline=manual_inflection(Vg,G,Gsmooth,smoothing,
+                                                    float(Vg_inflman.get()),float(dGdVg_inflman.get())*1e-3)
+
+        paramdict['V0 (V)']=V0
+        paramdict['Vth (V)']=Vth
+        paramdict['Vg_infl (V)']=float(Vg_inflman.get())
+        paramdict['V_Rs (V)']=V_Rs
+
+        exportdatadict['Inflection fit (S)']=inflectionline
+
+        # If the user defines the inflction point manually, we can't calculate the uncertainties
+        # so we remove the relevant keys from the dictionaries
+        key_deleter(paramdict,'V0 uncertainty (V)')
+        key_deleter(paramdict,'Vth uncertainty (V)')
+        key_deleter(paramdict,'Vg_infl uncertainty (V)')
+        key_deleter(exportdatadict,'dGdVg fit (S/V)')
+        key_deleter(exportdatadict,'dGdVg fit uncertainties (S/V)')
+                                
+        set_exportparams()
+        set_exportdata()
+
+        if GorI.get()=='G provided':
+            if Gunits.get()=='2e2/h':
+                inflectionline=inflectionline/7.748091729e-5
+            elif Gunits.get()=='e2/h':
+                inflectionline=inflectionline/7.748091729e-5*2
+        ax[0].plot(Vg,inflectionline,label='slope at inflection')
+        ax[0].legend()
+        fig1.canvas.draw()
+
+        
+    def clear_deriv():
+        fig2.clf()
+        fig2.canvas.draw()
+
+    def plot_mobility():
+        fig3.clf()
+        
+        Vg,G,holes=VgandG(convertunits=True)
+        
+        if Rs_initorfix.get()=='Fixed Rs':
+            Rs=float(initial_Rs.get())
+            Rs_uncertainty=float(Rs_error.get())
+
+            # If the user previously fitted Rs, but now provides a fixed value, delete these from the data.
+            key_deleter(exportdatadict,'Vg for Rs fit (V)')
+            key_deleter(exportdatadict,'Rs fit (S)')
+
+        else:
+            Rs,Rs_fit,V_Rs_ind,result_drudeRs=perform_Rs_fit(Vg,G,
+                                                        paramdict['V0 (V)'],paramdict['V_Rs (V)'],
+                                                        float(initial_Rs.get()),float(initial_mu.get())*1e-4,
+                                                        float(L.get()),float(c.get()),holes)
+
+            if holes:
+                exportdatadict['Vg for Rs fit (V)']=Vg[:V_Rs_ind]
+            else:
+                exportdatadict['Vg for Rs fit (V)']=Vg[V_Rs_ind:]
+            exportdatadict['Rs fit (S)']=Rs_fit
+
+            if GorI.get()=='G provided':
+                if Gunits.get()=='2e2/h':
+                    Rs_fit=Rs_fit/7.748091729e-5
+                elif Gunits.get()=='e2/h':
+                    Rs_fit=Rs_fit/7.748091729e-5*2
+            
+            ax[0].plot(exportdatadict['Vg for Rs fit (V)'],Rs_fit,label='fit for R_s')
+            ax[0].legend()
+            fig1.canvas.draw()
+
+            Rs_uncertainty=result_drudeRs.params['Rs'].stderr
+        
+        paramdict['Rs (Ohm)']=Rs
+        paramdict['Rs uncertainty (Ohm)']=Rs_uncertainty
+        set_exportparams()
+
+        if Ctype.get()=='Width':
+            c_val=float(c.get())
+            d_C_val=float(d_C.get())
+            L_val=float(L.get())
+            d_L_val=float(d_L.get())
+            W_val=float(W.get())
+            d_W_val=float(d_W.get())
+            Cperarea=c_val/(L_val*W_val)
+            d_Cperarea=np.sqrt((d_C_val/c_val)**2+(d_L_val/L_val)**2+(d_W_val/W_val)**2)*Cperarea
+        else:
+            Cperarea=float(W.get())
+            d_Cperarea=float(d_W.get())
+
+        if holes:
+            density=Cperarea*(paramdict['V0 (V)']-Vg)/1.602176634e-19
+            mu_eff=float(L.get())**2/(float(c.get())*(paramdict['V0 (V)']-Vg)*((1/G)-Rs))
+        else:
+            density=Cperarea*(Vg-paramdict['V0 (V)'])/1.602176634e-19
+            mu_eff=float(L.get())**2/(float(c.get())*(Vg-paramdict['V0 (V)'])*((1/G)-Rs))
+
+        exportdatadict['density (1/m2)']=density
+        exportdatadict['mu_eff (m2/Vs)']=mu_eff
+
+        try:
+            d_V0=paramdict['V0 uncertainty (V)']
+            d_L_val=float(d_L.get())
+            d_C_val=float(d_C.get())
+            d_mu_eff,d_density = compute_mu_uncertainties(Vg,G,float(L.get()),float(c.get()),Cperarea,paramdict['V0 (V)'],Rs,d_L_val,d_C_val,d_Cperarea,d_V0,Rs_uncertainty,holes)
+            exportdatadict['density uncertainties (1/m2)']=d_density
+            exportdatadict['mu_eff uncertainties (m2/Vs)']=d_mu_eff
+            mu_eff_plus=mu_eff+d_mu_eff
+            mu_eff_minus=mu_eff-d_mu_eff
+            density_plus=density+d_density
+            density_minus=density-d_density
+            plot_uncertainties=True
+        except KeyError:
+            plot_uncertainties=False
+        
+        set_exportdata()
+        plotstart=(np.abs(Vg - (2*paramdict['Vth (V)']-paramdict['Vg_infl (V)']))).argmin()
+            
+        ax[2]=fig3.add_subplot()
+        if holes:
+            ax[2].plot(density[:plotstart]*1e-12/1e4,mu_eff[:plotstart]*1e4,'k',label='mu_eff')
+            if plot_uncertainties:
+                ax[2].fill_between(density_minus[:plotstart]*1e-12/1e4,mu_eff_minus[:plotstart]*1e4,mu_eff_plus[:plotstart]*1e4,alpha=1,color='gray',label='uncertainty')
+                ax[2].fill_between(density_plus[:plotstart]*1e-12/1e4,mu_eff_minus[:plotstart]*1e4,mu_eff_plus[:plotstart]*1e4,alpha=1,color='gray')
+                ax[2].fill_betweenx(mu_eff_minus[:plotstart]*1e4,density_minus[:plotstart]*1e-12/1e4,density_plus[:plotstart]*1e-12/1e4,alpha=1,color='gray')
+                ax[2].fill_betweenx(mu_eff_plus[:plotstart]*1e4,density_minus[:plotstart]*1e-12/1e4,density_plus[:plotstart]*1e-12/1e4,alpha=1,color='gray')
+                ax[2].fill_between(density[:plotstart]*1e-12/1e4,(mu_eff-d_mu_eff)[:plotstart]*1e4,(mu_eff+d_mu_eff)[:plotstart]*1e4,alpha=1,color='gray')
+                ax[2].fill_betweenx(mu_eff[:plotstart]*1e4,density_minus[:plotstart]*1e-12/1e4,density_plus[:plotstart]*1e-12/1e4,alpha=1,color='gray')
+        else:
+            ax[2].plot(density[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,'k',label='mu_eff')
+            if plot_uncertainties:
+                # Would obviously be most accurate to plot just the errorbars, but it looks horrible in matplotlib. This is the simplest (but dumbest) way to make it look good while being sure of covering all uncertainties.
+                ax[2].fill_between(density_minus[plotstart:]*1e-12/1e4,mu_eff_minus[plotstart:]*1e4,mu_eff_plus[plotstart:]*1e4,alpha=1,color='gray',label='uncertainty')
+                ax[2].fill_between(density_plus[plotstart:]*1e-12/1e4,mu_eff_minus[plotstart:]*1e4,mu_eff_plus[plotstart:]*1e4,alpha=1,color='gray')
+                ax[2].fill_betweenx(mu_eff_minus[plotstart:]*1e4,density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:]*1e-12/1e4,alpha=1,color='gray')
+                ax[2].fill_betweenx(mu_eff_plus[plotstart:]*1e4,density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:]*1e-12/1e4,alpha=1,color='gray')
+                ax[2].fill_between(density[plotstart:]*1e-12/1e4,(mu_eff-d_mu_eff)[plotstart:]*1e4,(mu_eff+d_mu_eff)[plotstart:]*1e4,alpha=1,color='gray')
+                ax[2].fill_betweenx(mu_eff[plotstart:]*1e4,density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:]*1e-12/1e4,alpha=1,color='gray')
+        
+        ax[2].set_xlabel('Carrier density x 10$^{12}$ (cm$^{-2}$)')
+        ax[2].set_ylabel('Mobility (cm$^2$/(Vs))')
+        ax[2].legend()
+        fig3.tight_layout()
+        fig3.canvas.draw()
+        
+
+    def clear_mobility():
+        fig3.clf()
+        fig3.canvas.draw()
+
+    def plot_drude():
+        
+        Vg,G,holes=VgandG(convertunits=True)
+
+        findRs={'Fixed Rs':False,
+                'Initial Rs':True}
+            
+        mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude=perform_drude_fit(Vg,G,
+                                                        paramdict['Vth (V)'],
+                                                        float(initial_Rs.get()),float(initial_mu.get())*1e-4,
+                                                        float(L.get()),float(c.get()),holes,findRs[Rs_initorfix.get()])
+        
+        paramdict['mu_FET (m2/Vs)']=mu_drude
+        paramdict['mu_FET uncertainty (m2/Vs)']=result_drude.params['mu'].stderr           
+        set_exportparams()
+        
+        if holes:
+            exportdatadict['Vg for mu_FET fit (V)']=Vg[:Vth_ind]
+        else:
+            exportdatadict['Vg for mu_FET fit (V)']=Vg[Vth_ind:]
+        exportdatadict['mu_FET fit (S)']=drude_fit
+        set_exportdata()
+        
+        mu_drude_array=np.full(Vg.shape[0],mu_drude) # Make an array of the correct size for plotting
+        plotstart=(np.abs(Vg - (2*paramdict['Vth (V)']-paramdict['Vg_infl (V)']))).argmin()
+        if holes:
+            ax[2].plot(exportdatadict['density (1/m2)'][:plotstart]*1e-12/1e4,mu_drude_array[:plotstart]*1e4,label='mu_FET')
+            ax[2].fill_between(exportdatadict['density (1/m2)'][:plotstart]*1e-12/1e4,(mu_drude_array-result_drude.params['mu'].stderr)[:plotstart]*1e4,(mu_drude_array+result_drude.params['mu'].stderr)[:plotstart]*1e4,alpha=0.5,color='tab:blue',label='uncertainty')
+        else:
+            ax[2].plot(exportdatadict['density (1/m2)'][plotstart:]*1e-12/1e4,mu_drude_array[plotstart:]*1e4,label='mu_FET')
+            ax[2].fill_between(exportdatadict['density (1/m2)'][plotstart:]*1e-12/1e4,(mu_drude_array-result_drude.params['mu'].stderr)[plotstart:]*1e4,(mu_drude_array+result_drude.params['mu'].stderr)[plotstart:]*1e4,alpha=0.5,color='tab:blue',label='uncertainty')
+        ax[2].legend()
+        fig3.canvas.draw()
+        
+        if GorI.get()=='G provided':
+            if Gunits.get()=='2e2/h':
+                drude_fit=drude_fit/7.748091729e-5
+            elif Gunits.get()=='e2/h':
+                drude_fit=drude_fit/7.748091729e-5*2
+        
+        ax[0].plot(exportdatadict['Vg for mu_FET fit (V)'],drude_fit,label='mu_FET fit')
+        ax[0].legend()
+        fig1.canvas.draw()
+
+    def plot_all(*args):
+        plot_data()
+        plot_deriv()
+        plot_mobility()
+        plot_drude()
+
+    def plot_dmd(*args):
+        plot_deriv()
+        plot_mobility()
+        plot_drude()
+    
+    def plot_md(*args):
+        plot_mobility()
+        plot_drude()
+
     def load_data():
         data.clear()  #Clear dictionaries when loading a new datafile to make sure no old data/params get stuck around
         paramdict.clear()
@@ -76,7 +385,8 @@ def run(scaling=0):
         menu.delete(0, 'end')
         for i in range(numcols):
             menu.add_command(label=str(i),command=lambda value=i: Gcolumn.set(value))
-            
+
+        plot_data()
             
     loadframe = ttk.Frame(dataframe, padding='3 3 10 10')
     loadframe.grid(column=0,row=0,sticky=('N,W,E,S'))
@@ -97,8 +407,10 @@ def run(scaling=0):
     Label(colframe,text='G (or I) column').grid(row=1,column=2)
     Gcolumn=StringVar()
     Gcolumn.set('1')
+    Gcolumn.trace('w',plot_data)
     Vgcolumn=StringVar()
     Vgcolumn.set('0')
+    Vgcolumn.trace('w',plot_data)
     # Vgcol_entry=Entry(colframe,textvariable=Vgcolumn,width=4).grid(row=1,column=1,padx='0 10')
     # Gcol_entry=Entry(colframe,textvariable=Gcolumn,width=4).grid(row=1,column=3)
     Vgcol_dropmenu=OptionMenu(colframe,Vgcolumn,*[str(i) for i in range(2)])
@@ -111,6 +423,7 @@ def run(scaling=0):
     options=['S','2e2/h','e2/h']
     Gunits=StringVar()
     Gunits.set('S')
+    Gunits.trace('w',plot_data)
     Gdropmenu=OptionMenu(unitsframe,Gunits,*options)
     Gdropmenu.grid(row=1)
     Gdroptt=CreateToolTip(Gdropmenu,'Very important to make sure this is set correctly')
@@ -130,6 +443,7 @@ def run(scaling=0):
     Label(GorIframe,text='Vsd').grid(row=1,column=1,sticky='E')
     Vsd=StringVar()
     Vsd.set('0')
+    Vsd.trace('w',plot_data)
     Vsd_entry=Entry(GorIframe,textvariable=Vsd,width=6)
     Vsd_entry.grid(row=1,column=2)
     Label(GorIframe, text='(V)').grid(row=1,column=3,sticky='W')
@@ -318,30 +632,6 @@ def run(scaling=0):
     toolbar = NavigationToolbar2Tk(canvas1, databottomframe)
     toolbar.update()
     canvas1.get_tk_widget().pack()#(side=TOP, fill=BOTH, expand=1)
-    def plot_data():
-        fig1.clf()
-        Vg,G,holes=VgandG(convertunits=False)
-        
-        exportdatadict['Vg (V)']=Vg
-        exportdatadict['G (S)']=G
-        set_exportdata()
-            
-        ax[0]=fig1.add_subplot()
-        ax[0].plot(Vg,G,'k',label='data')
-        ax[0].set_xlabel('Gate voltage (V)')
-        if GorI.get()=='I provided':
-            ax[0].set_ylabel('Conductance (S)')
-        else:
-            ax[0].set_ylabel(f'Conductance ({Gunits.get()})')
-        ax[0].set_ylim([G.min()-(G.max()-G.min())/10,G.max()+(G.max()-G.min())/10])
-        
-        fig1.tight_layout()
-        ax[0].legend()
-        fig1.canvas.draw()
-        
-    def clear_plot():
-        fig1.clf()
-        fig1.canvas.draw()
         
     plotdatabutton = Button(datatopframe, text='2) Plot data/Refresh', command=plot_data,fg='green').grid(row=0)
     clearplotbutton = Button(datatopframe, text='Clear plot', command=clear_plot).grid(row=0,column=2)
@@ -365,74 +655,6 @@ def run(scaling=0):
     toolbar = NavigationToolbar2Tk(canvas2, derivbottomframe)
     toolbar.update()
     canvas2.get_tk_widget().pack()#(side=TOP, fill=BOTH, expand=1)
-    def plot_deriv():
-        #First do the analysis
-        Vg,G,holes=VgandG(convertunits=True)
-        
-        #Range over which to smooth, as a percentage of the data range
-        smoothing=float(smoothingbut.get())/100
-        
-        if smoothing!=0:
-            Gsmooth=savgol_filter(G, int(G.shape[0]*smoothing), 5, deriv=0, delta=1.0, axis=-1, mode='interp', cval=0.0)
-            dGdVg = np.gradient(Gsmooth, Vg)
-        else:
-            Gsmooth=0
-            dGdVg = np.gradient(G, Vg)
-
-        exportdatadict['dGdVg (S/V)']=dGdVg
-        set_exportdata()
-            
-        fig2.clf()
-        ax[1]=fig2.add_subplot()
-        ax[1].plot(Vg,dGdVg*1e3,'k',label='data')
-        ax[1].set_xlabel('Gate voltage (V)')
-        ax[1].set_ylabel(f'$dG/dV_g$ (mS/V)')
-        ax[1].legend()
-        if Vmin.get()!='Min' and Vmax.get()!='Max':
-            ax[1].set_xlim([float(Vmin.get()),float(Vmax.get())])
-        elif Vmin.get()!='Min':
-            ax[1].set_xlim([float(Vmin.get()),ax[1].get_xlim()[1]])
-        elif Vmax.get()!='Max':
-            ax[1].set_xlim([ax[1].get_xlim()[0],float(Vmax.get())])
-        fig2.tight_layout()
-        fig2.canvas.draw()
-
-        (V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit,
-        fit_uncertainties,V0_uncertainty,Vth_uncertainty,d_Vg_infl)=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,
-                                                                                      Vmin=Vmin.get(),Vmax=Vmax.get(),
-                                                                                      holes=holes)
-        paramdict['V0 (V)']=V0
-        paramdict['V0 uncertainty (V)']=V0_uncertainty
-        paramdict['Vth (V)']=Vth
-        paramdict['Vth uncertainty (V)']=Vth_uncertainty
-        paramdict['Vg_infl (V)']=Vg_infl
-        paramdict['Vg_infl uncertainty (V)']=d_Vg_infl
-        paramdict['V_Rs (V)']=V_Rs
-                                
-        set_exportparams()
-        
-        exportdatadict['dGdVg fit (S/V)']=deriv_fit
-        exportdatadict['dGdVg fit uncertainties (S/V)']=fit_uncertainties
-        exportdatadict['Inflection fit (S)']=inflectionline
-        set_exportdata()
-
-        ax[1].plot(Vg,deriv_fit*1e3,label='fit')
-        ax[1].fill_between(Vg,(deriv_fit-fit_uncertainties)*1e3,(deriv_fit+fit_uncertainties)*1e3,alpha=0.8,color='tab:blue',label='fit uncertainty')
-        ax[1].legend()
-        fig2.canvas.draw()
-        if GorI.get()=='G provided':
-            if Gunits.get()=='2e2/h':
-                inflectionline=inflectionline/7.748091729e-5
-            elif Gunits.get()=='e2/h':
-                inflectionline=inflectionline/7.748091729e-5*2
-        ax[0].plot(Vg,inflectionline,label='slope at inflection')
-        ax[0].legend()
-        fig1.canvas.draw()
-
-        
-    def clear_deriv():
-        fig2.clf()
-        fig2.canvas.draw()
         
     plotderivbutton = Button(derivtopframe, text='3) Fit dGdVg/Refresh', command=plot_deriv,fg='green')
     plotderivbutton.grid(row=0)
@@ -473,46 +695,6 @@ def run(scaling=0):
     CreateToolTip(Vmax_entry,plotderivtext)
     CreateToolTip(Vmax_label,plotderivtext)
     
-    def plot_manual_inflection():
-        Vg,G,holes=VgandG(convertunits=True)
-        
-        #Range over which to smooth, as a percentage of the data range
-        smoothing=float(smoothingbut.get())/100
-        
-        if smoothing!=0:
-            Gsmooth=savgol_filter(G, int(G.shape[0]*smoothing), 5, deriv=0, delta=1.0, axis=-1, mode='interp', cval=0.0)
-        else:
-            Gsmooth=0
-
-        V0,Vth,V_Rs,inflectionline=manual_inflection(Vg,G,Gsmooth,smoothing,
-                                                    float(Vg_inflman.get()),float(dGdVg_inflman.get())*1e-3)
-
-        paramdict['V0 (V)']=V0
-        paramdict['Vth (V)']=Vth
-        paramdict['Vg_infl (V)']=float(Vg_inflman.get())
-        paramdict['V_Rs (V)']=V_Rs
-
-        exportdatadict['Inflection fit (S)']=inflectionline
-
-        # If the user defines the inflction point manually, we can't calculate the uncertainties
-        # so we remove the relevant keys from the dictionaries
-        key_deleter(paramdict,'V0 uncertainty (V)')
-        key_deleter(paramdict,'Vth uncertainty (V)')
-        key_deleter(paramdict,'Vg_infl uncertainty (V)')
-        key_deleter(exportdatadict,'dGdVg fit (S/V)')
-        key_deleter(exportdatadict,'dGdVg fit uncertainties (S/V)')
-                                
-        set_exportparams()
-        set_exportdata()
-
-        if GorI.get()=='G provided':
-            if Gunits.get()=='2e2/h':
-                inflectionline=inflectionline/7.748091729e-5
-            elif Gunits.get()=='e2/h':
-                inflectionline=inflectionline/7.748091729e-5*2
-        ax[0].plot(Vg,inflectionline,label='slope at inflection')
-        ax[0].legend()
-        fig1.canvas.draw()
 
     manuallabel=Label(derivextraframe,text='Enter peak position manually:')
     manuallabel.grid(column=0,row=0)
@@ -559,167 +741,13 @@ def run(scaling=0):
     toolbar = NavigationToolbar2Tk(canvas3, mobbottomframe)
     toolbar.update()
     canvas3.get_tk_widget().pack()#(side=TOP, fill=BOTH, expand=1)
-    def plot_mobility():
-        fig3.clf()
-        
-        Vg,G,holes=VgandG(convertunits=True)
-        
-        if Rs_initorfix.get()=='Fixed Rs':
-            Rs=float(initial_Rs.get())
-            Rs_uncertainty=float(Rs_error.get())
 
-            # If the user previously fitted Rs, but now provides a fixed value, delete these from the data.
-            key_deleter(exportdatadict,'Vg for Rs fit (V)')
-            key_deleter(exportdatadict,'Rs fit (S)')
-
-        else:
-            Rs,Rs_fit,V_Rs_ind,result_drudeRs=perform_Rs_fit(Vg,G,
-                                                        paramdict['V0 (V)'],paramdict['V_Rs (V)'],
-                                                        float(initial_Rs.get()),float(initial_mu.get())*1e-4,
-                                                        float(L.get()),float(c.get()),holes)
-
-            if holes:
-                exportdatadict['Vg for Rs fit (V)']=Vg[:V_Rs_ind]
-            else:
-                exportdatadict['Vg for Rs fit (V)']=Vg[V_Rs_ind:]
-            exportdatadict['Rs fit (S)']=Rs_fit
-
-            if GorI.get()=='G provided':
-                if Gunits.get()=='2e2/h':
-                    Rs_fit=Rs_fit/7.748091729e-5
-                elif Gunits.get()=='e2/h':
-                    Rs_fit=Rs_fit/7.748091729e-5*2
-            
-            ax[0].plot(exportdatadict['Vg for Rs fit (V)'],Rs_fit,label='fit for R_s')
-            ax[0].legend()
-            fig1.canvas.draw()
-
-            Rs_uncertainty=result_drudeRs.params['Rs'].stderr
-        
-        paramdict['Rs (Ohm)']=Rs
-        paramdict['Rs uncertainty (Ohm)']=Rs_uncertainty
-        set_exportparams()
-
-        if Ctype.get()=='Width':
-            c_val=float(c.get())
-            d_C_val=float(d_C.get())
-            L_val=float(L.get())
-            d_L_val=float(d_L.get())
-            W_val=float(W.get())
-            d_W_val=float(d_W.get())
-            Cperarea=c_val/(L_val*W_val)
-            d_Cperarea=np.sqrt((d_C_val/c_val)**2+(d_L_val/L_val)**2+(d_W_val/W_val)**2)*Cperarea
-        else:
-            Cperarea=float(W.get())
-            d_Cperarea=float(d_W.get())
-
-        if holes:
-            density=Cperarea*(paramdict['V0 (V)']-Vg)/1.602176634e-19
-            mu_eff=float(L.get())**2/(float(c.get())*(paramdict['V0 (V)']-Vg)*((1/G)-Rs))
-        else:
-            density=Cperarea*(Vg-paramdict['V0 (V)'])/1.602176634e-19
-            mu_eff=float(L.get())**2/(float(c.get())*(Vg-paramdict['V0 (V)'])*((1/G)-Rs))
-
-        exportdatadict['density (1/m2)']=density
-        exportdatadict['mu_eff (m2/Vs)']=mu_eff
-
-        try:
-            d_V0=paramdict['V0 uncertainty (V)']
-            d_L_val=float(d_L.get())
-            d_C_val=float(d_C.get())
-            d_mu_eff,d_density = compute_mu_uncertainties(Vg,G,float(L.get()),float(c.get()),Cperarea,paramdict['V0 (V)'],Rs,d_L_val,d_C_val,d_Cperarea,d_V0,Rs_uncertainty,holes)
-            exportdatadict['density uncertainties (1/m2)']=d_density
-            exportdatadict['mu_eff uncertainties (m2/Vs)']=d_mu_eff
-            mu_eff_plus=mu_eff+d_mu_eff
-            mu_eff_minus=mu_eff-d_mu_eff
-            density_plus=density+d_density
-            density_minus=density-d_density
-            plot_uncertainties=True
-        except KeyError:
-            plot_uncertainties=False
-        
-        set_exportdata()
-        plotstart=(np.abs(Vg - (2*paramdict['Vth (V)']-paramdict['Vg_infl (V)']))).argmin()
-            
-        ax[2]=fig3.add_subplot()
-        if holes:
-            ax[2].plot(density[:plotstart]*1e-12/1e4,mu_eff[:plotstart]*1e4,'k',label='mu_eff')
-            if plot_uncertainties:
-                ax[2].fill_between(density_minus[:plotstart]*1e-12/1e4,mu_eff_minus[:plotstart]*1e4,mu_eff_plus[:plotstart]*1e4,alpha=1,color='gray',label='uncertainty')
-                ax[2].fill_between(density_plus[:plotstart]*1e-12/1e4,mu_eff_minus[:plotstart]*1e4,mu_eff_plus[:plotstart]*1e4,alpha=1,color='gray')
-                ax[2].fill_betweenx(mu_eff_minus[:plotstart]*1e4,density_minus[:plotstart]*1e-12/1e4,density_plus[:plotstart]*1e-12/1e4,alpha=1,color='gray')
-                ax[2].fill_betweenx(mu_eff_plus[:plotstart]*1e4,density_minus[:plotstart]*1e-12/1e4,density_plus[:plotstart]*1e-12/1e4,alpha=1,color='gray')
-                ax[2].fill_between(density[:plotstart]*1e-12/1e4,(mu_eff-d_mu_eff)[:plotstart]*1e4,(mu_eff+d_mu_eff)[:plotstart]*1e4,alpha=1,color='gray')
-                ax[2].fill_betweenx(mu_eff[:plotstart]*1e4,density_minus[:plotstart]*1e-12/1e4,density_plus[:plotstart]*1e-12/1e4,alpha=1,color='gray')
-        else:
-            ax[2].plot(density[plotstart:]*1e-12/1e4,mu_eff[plotstart:]*1e4,'k',label='mu_eff')
-            if plot_uncertainties:
-                # Would obviously be most accurate to plot just the errorbars, but it looks horrible in matplotlib. This is the simplest (but dumbest) way to make it look good while being sure of covering all uncertainties.
-                ax[2].fill_between(density_minus[plotstart:]*1e-12/1e4,mu_eff_minus[plotstart:]*1e4,mu_eff_plus[plotstart:]*1e4,alpha=1,color='gray',label='uncertainty')
-                ax[2].fill_between(density_plus[plotstart:]*1e-12/1e4,mu_eff_minus[plotstart:]*1e4,mu_eff_plus[plotstart:]*1e4,alpha=1,color='gray')
-                ax[2].fill_betweenx(mu_eff_minus[plotstart:]*1e4,density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:]*1e-12/1e4,alpha=1,color='gray')
-                ax[2].fill_betweenx(mu_eff_plus[plotstart:]*1e4,density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:]*1e-12/1e4,alpha=1,color='gray')
-                ax[2].fill_between(density[plotstart:]*1e-12/1e4,(mu_eff-d_mu_eff)[plotstart:]*1e4,(mu_eff+d_mu_eff)[plotstart:]*1e4,alpha=1,color='gray')
-                ax[2].fill_betweenx(mu_eff[plotstart:]*1e4,density_minus[plotstart:]*1e-12/1e4,density_plus[plotstart:]*1e-12/1e4,alpha=1,color='gray')
-        
-        ax[2].set_xlabel('Carrier density x 10$^{12}$ (cm$^{-2}$)')
-        ax[2].set_ylabel('Mobility (cm$^2$/(Vs))')
-        ax[2].legend()
-        fig3.tight_layout()
-        fig3.canvas.draw()
-        
-
-    def clear_mobility():
-        fig3.clf()
-        fig3.canvas.draw()
     Rsbutton=Button(mobtopframe, text='5) Find Rs and plot mu_eff/Refresh', command=plot_mobility,fg='green')
     Rsbutton.grid(row=0)
     Button(mobtopframe, text='Clear plot', command=clear_mobility).grid(row=0,column=2)
     CreateToolTip(Rsbutton,'If the fit is not working well, and the fit in the first panel (orange line) seems '
                 'bad, try checking the initial fit values for R_s and mu')
-    def plot_drude():
-        
-        Vg,G,holes=VgandG(convertunits=True)
 
-        findRs={'Fixed Rs':False,
-                'Initial Rs':True}
-            
-        mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude=perform_drude_fit(Vg,G,
-                                                        paramdict['Vth (V)'],
-                                                        float(initial_Rs.get()),float(initial_mu.get())*1e-4,
-                                                        float(L.get()),float(c.get()),holes,findRs[Rs_initorfix.get()])
-        
-        paramdict['mu_FET (m2/Vs)']=mu_drude
-        paramdict['mu_FET uncertainty (m2/Vs)']=result_drude.params['mu'].stderr           
-        set_exportparams()
-        
-        if holes:
-            exportdatadict['Vg for mu_FET fit (V)']=Vg[:Vth_ind]
-        else:
-            exportdatadict['Vg for mu_FET fit (V)']=Vg[Vth_ind:]
-        exportdatadict['mu_FET fit (S)']=drude_fit
-        set_exportdata()
-        
-        mu_drude_array=np.full(Vg.shape[0],mu_drude) # Make an array of the correct size for plotting
-        plotstart=(np.abs(Vg - (2*paramdict['Vth (V)']-paramdict['Vg_infl (V)']))).argmin()
-        if holes:
-            ax[2].plot(exportdatadict['density (1/m2)'][:plotstart]*1e-12/1e4,mu_drude_array[:plotstart]*1e4,label='mu_FET')
-            ax[2].fill_between(exportdatadict['density (1/m2)'][:plotstart]*1e-12/1e4,(mu_drude_array-result_drude.params['mu'].stderr)[:plotstart]*1e4,(mu_drude_array+result_drude.params['mu'].stderr)[:plotstart]*1e4,alpha=0.5,color='tab:blue',label='uncertainty')
-        else:
-            ax[2].plot(exportdatadict['density (1/m2)'][plotstart:]*1e-12/1e4,mu_drude_array[plotstart:]*1e4,label='mu_FET')
-            ax[2].fill_between(exportdatadict['density (1/m2)'][plotstart:]*1e-12/1e4,(mu_drude_array-result_drude.params['mu'].stderr)[plotstart:]*1e4,(mu_drude_array+result_drude.params['mu'].stderr)[plotstart:]*1e4,alpha=0.5,color='tab:blue',label='uncertainty')
-        ax[2].legend()
-        fig3.canvas.draw()
-        
-        if GorI.get()=='G provided':
-            if Gunits.get()=='2e2/h':
-                drude_fit=drude_fit/7.748091729e-5
-            elif Gunits.get()=='e2/h':
-                drude_fit=drude_fit/7.748091729e-5*2
-        
-        ax[0].plot(exportdatadict['Vg for mu_FET fit (V)'],drude_fit,label='mu_FET fit')
-        ax[0].legend()
-        fig1.canvas.draw()
         
     drudebutton=Button(mobtopframe, text='Fit and plot mu_FET', command=plot_drude)
     drudebutton.grid(row=0,column=1)
