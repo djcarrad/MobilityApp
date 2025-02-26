@@ -150,8 +150,7 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax,holes=False):
     Vth_uncertainty = np.abs(Vth_max-Vth_min)/2
 
     V0 = Vth-2*(Vg_infl-Vth)         #Vg for which density extrapolates to zero.
-    #V0_uncertainty = np.sqrt(Vth_uncertainty**2 + (2*d_Vg_infl)**2)  # Propogate as if independent, which isn't strictly true.
-    V0_uncertainty = Vth_uncertainty + 2*d_Vg_infl   # A better estimate of the uncertainty is probably just to add the two contributing uncertainties in proportion.
+    V0_uncertainty = np.sqrt(Vth_uncertainty**2 + (2*d_Vg_infl)**2)
 
     V_Rs = Vg_infl+2*(Vg_infl-Vth)   #Vg above which we will use to calculate series resistance
     
