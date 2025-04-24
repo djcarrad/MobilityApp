@@ -15,7 +15,7 @@ import tkinter as tk
 
 from functools import partial
 
-from .supportfunctions import *
+from mobilityapp.supportfunctions import *
 
 def run(scaling=0):
     root = Tk()

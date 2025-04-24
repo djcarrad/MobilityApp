@@ -24,7 +24,8 @@ There are three options for installing, from easiest/most limited to hardest/gre
 
 1. GUI only (Windows only)
 -----------------------------------
-If you are on windows and only want to use the GUI, you can download 'mobilityapp.exe' from the file list above.
+If you are on Windows and only want to use the GUI, you can download 'MobilityApp.exe' 
+from https://github.com/djcarrad/MobilityApp/releases.
 
 
 

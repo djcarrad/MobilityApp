@@ -1,8 +1,8 @@
-from .app import run
+from mobilityapp.app import run
 
 import sys
 
-from .supportfunctions import (perform_deriv_fit, 
+from mobilityapp.supportfunctions import (perform_deriv_fit, 
                                 perform_drude_fit, 
                                 perform_Rs_fit, 
                                 perform_entire_prodecure,
