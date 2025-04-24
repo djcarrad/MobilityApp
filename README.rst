@@ -2,7 +2,8 @@ MobilityApp
 ===================================
 Python-based tool to analyse conductance vs gate voltage data and extract mobility and density.
 
-This application provides access to the methods described in this paper: EVENTUAL LINK
+This application provides access to the methods described in the manuscipt 'Measuring the 
+density-dependent charge carrier mobility in two-terminal nanodevices' by C.E.N. Petersen, et al.
 
 In short; for any FET-like device, conductance, G, vs gate voltage, Vg, data can be transformed into 
 mobility vs density data, assuming that scattering at low density is dominated by random impurities.
@@ -45,44 +46,26 @@ To rescale/resize the GUI to better fit your screen, you can specify a multiplie
 
 The 'examples' Jupyter notebook runs through how to use each module of the MobilityApp. If Jupyter isn't already installed:
 
-    pip install jupyterlab
+    pip install jupyter
 
 
 3. Editable installation (all systems*)
 -----------------------------------
-To install an editable version using python installed from Anaconda:
-
-In git bash:
-
-    cd C:/git
-
-    git clone https://github.com/djcarrad/MobilityApp
-
-
-In Anaconda Prompt:
-
-    conda create -n mobility python
-
-    activate mobility
-
-    pip install -e C:/git/MobilityApp
-
-    pip install jupyterlab
-
-The GUI can be run from Anaconda Prompt with:
-
-    mobilityapp
+You can always clone the github repository to your own machine and run from there. 
 
 *Note: Only tested on Windows, but the code is pure python with a tkinter gui, so should work fine on Mac and 'nix.
 
 
 Using the app:
 ===================================
+Most features/buttons/inputs have a tool-tip when hovering the mouse over them which provides information 
+on how to step through the process. Below is a little more information if you get stuck.
 
 Loading data
 -----------------------------------
-Currently only datasets compatible with numpy.loadtxt are supported; but these are most datasets.
-Basically, if you can load it into Excel, you can probably load it into this app.
+Datasets compatible with numpy.loadtxt are supported; that is, a text-based dataset with 
+two columns (i.e. gate voltage and conductance or current) of equal length. You can load more columns and 
+simply select the two you wish to use.
 
 The app is flexible towards data being measured in siemens or units of the conductance quantum.
 If you only have current data (recorded in ampere) this is also fine; you just need to provide the
@@ -100,11 +83,12 @@ critical to the success of the method. To make the process less immune to noise 
 the app uses a specific form of an asymmetric Lorentzian that conforms well enough to the
 derivative of most G(V_g) data we have tried. The important point is that only the peak
 coordinates are relevant! Therefore, it doesn't matter too much if the fit is poor at other Vg; as 
-long as the fitting procedure finds the co-ordinates accurately, it's all good. But please check it's 
+long as the fitting procedure finds the peak co-ordinates accurately. But please check it's 
 done a good job!! If it hasn't done a good job, play with the parameters until it does. If you really
 give up, but it's super obvious where the peak is (the human eye is a really good fitting tool), 
 just write the values manually below the plot. However, it's not clear what the uncertainties should 
-be in this case, so if you manually declaring the peak co-ordinates, the uncertainties in mobility and density are not calculated.
+be in this case, so if you manually declaring the peak co-ordinates, the uncertainties in mobility and density 
+are not calculated.
 
 Exported data
 ------------------------------------
