@@ -1,19 +1,15 @@
 # Import necessary libraries
-import matplotlib.pyplot as plt
+from matplotlib.pyplot import rcParams
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
 from matplotlib.figure import Figure
 
 from scipy.signal import savgol_filter
-import numpy as np
-import json
-import csv
+from numpy import gradient, sqrt, abs, full, loadtxt, transpose, average, set_printoptions
+from json import dump
+from csv import writer
 
-from tkinter import *
-from tkinter import ttk
-import tkinter as tk
-
-from functools import partial
+from tkinter import Tk, StringVar, filedialog, Label, Entry, Button, OptionMenu, Listbox, ttk, VERTICAL, HORIZONTAL
 
 from mobilityapp.supportfunctions import *
 
@@ -83,10 +79,10 @@ def run(scaling=0):
         
         if smoothing!=0:
             Gsmooth=savgol_filter(G, int(G.shape[0]*smoothing), 5, deriv=0, delta=1.0, axis=-1, mode='interp', cval=0.0)
-            dGdVg = np.gradient(Gsmooth, Vg)
+            dGdVg = gradient(Gsmooth, Vg)
         else:
             Gsmooth=0
-            dGdVg = np.gradient(G, Vg)
+            dGdVg = gradient(G, Vg)
 
         exportdatadict['dGdVg (S/V)']=dGdVg
         set_exportdata()
@@ -233,7 +229,7 @@ def run(scaling=0):
             W_val=float(W.get())
             d_W_val=float(d_W.get())
             Cperarea=c_val/(L_val*W_val)
-            d_Cperarea=np.sqrt((d_C_val/c_val)**2+(d_L_val/L_val)**2+(d_W_val/W_val)**2)*Cperarea
+            d_Cperarea=sqrt((d_C_val/c_val)**2+(d_L_val/L_val)**2+(d_W_val/W_val)**2)*Cperarea
         else:
             Cperarea=float(W.get())
             d_Cperarea=float(d_W.get())
@@ -264,7 +260,7 @@ def run(scaling=0):
             plot_uncertainties=False
         
         set_exportdata()
-        plotstart=(np.abs(Vg - (2*paramdict['Vth (V)']-paramdict['Vg_infl (V)']))).argmin()
+        plotstart=(abs(Vg - (2*paramdict['Vth (V)']-paramdict['Vg_infl (V)']))).argmin()
             
         ax[2]=fig3.add_subplot()
         if holes:
@@ -321,8 +317,8 @@ def run(scaling=0):
         exportdatadict['mu_FET fit (S)']=drude_fit
         set_exportdata()
         
-        mu_drude_array=np.full(Vg.shape[0],mu_drude) # Make an array of the correct size for plotting
-        plotstart=(np.abs(Vg - (2*paramdict['Vth (V)']-paramdict['Vg_infl (V)']))).argmin()
+        mu_drude_array=full(Vg.shape[0],mu_drude) # Make an array of the correct size for plotting
+        plotstart=(abs(Vg - (2*paramdict['Vth (V)']-paramdict['Vg_infl (V)']))).argmin()
         if holes:
             ax[2].plot(exportdatadict['density (1/m2)'][:plotstart]*1e-12/1e4,mu_drude_array[:plotstart]*1e4,label='mu_FET')
             ax[2].fill_between(exportdatadict['density (1/m2)'][:plotstart]*1e-12/1e4,(mu_drude_array-result_drude.params['mu'].stderr)[:plotstart]*1e4,(mu_drude_array+result_drude.params['mu'].stderr)[:plotstart]*1e4,alpha=0.5,color='tab:blue',label='uncertainty')
@@ -367,12 +363,12 @@ def run(scaling=0):
         clear_deriv()
         clear_mobility()
         
-        filename = tk.filedialog.askopenfilename()
+        filename = filedialog.askopenfilename()
         with open(filename) as f:
-            loadeddata=np.loadtxt(f)
+            loadeddata=loadtxt(f)
         loadedfile.set(filename)
         if loadeddata.shape[0]>loadeddata.shape[1]: #Assume that the data is going to have more measurement points than columns
-            loadeddata=np.transpose(loadeddata)
+            loadeddata=transpose(loadeddata)
         numcols=loadeddata.shape[0]
         data['numcols']=numcols
         for i in range(numcols):
@@ -597,7 +593,7 @@ def run(scaling=0):
             Vg=Vg[::-1]
             G=G[::-1]
 
-        if np.average(G[0:6])>np.average(G[-6:-1]):
+        if average(G[0:6])>average(G[-6:-1]):
             holes=True
         else:
             holes=False
@@ -624,7 +620,7 @@ def run(scaling=0):
     databottomframe.grid(row=1)
     ax={}
     figuresize=(3.9,2.4)
-    plt.rcParams.update({'font.size': 8})
+    rcParams.update({'font.size': 8})
     fig1 = Figure(figsize=figuresize, dpi=100)
     canvas1 = FigureCanvasTkAgg(fig1, master=databottomframe)  # A tk.DrawingArea.
     canvas1.draw()
@@ -760,14 +756,14 @@ def run(scaling=0):
         jsonexportdata={}
         for param in exportdatadict:
             jsonexportdata[param]=list(exportdatadict[param])
-        filename = tk.filedialog.asksaveasfilename(title='Select file name and type.',
+        filename = filedialog.asksaveasfilename(title='Select file name and type.',
                                                 defaultextension='.json',filetypes=[('JSON (*.json)','*.json'),('CSV (*.csv)','*.csv')])
         if '.json' in filename:
             with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(jsonexportdata, f, ensure_ascii=False,indent=4)
+                dump(jsonexportdata, f, ensure_ascii=False,indent=4)
         elif '.csv' in filename:
             with open(filename, 'w', newline='') as f:
-                writer = csv.writer(f)
+                writer = writer(f)
                 writer.writerow([param for param in exportdatadict])
                 for i in range(len(exportdatadict['Vg (V)'])):
                     row = []
@@ -787,24 +783,24 @@ def run(scaling=0):
         for param in exportdatadict:
             if len(exportdatadict[param])>maxsize:
                 maxsize=len(exportdatadict[param])
-        np.set_printoptions(threshold=maxsize)
+        set_printoptions(threshold=maxsize)
         root.clipboard_clear()
         datacopy=''
         for param in exportdatadict:
             datacopy+=param+': '+str(exportdatadict[param])+'\n'
         root.clipboard_append(datacopy)
-        np.set_printoptions(threshold=1000)
+        set_printoptions(threshold=1000)
     copydatabutton=Button(exportframe, text='Copy data', command=copy_data)
     copydatabutton.grid(row=0,column=1,sticky='W')
     def export_params():
-        filename = tk.filedialog.asksaveasfilename(title='Select file name and type.',
+        filename = filedialog.asksaveasfilename(title='Select file name and type.',
                                                 defaultextension='.json',filetypes=[('JSON (*.json)','*.json'),('CSV (*.csv)','*.csv')])
         if '.json' in filename:
             with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(paramdict, f, ensure_ascii=False, indent=4)
+                dump(paramdict, f, ensure_ascii=False, indent=4)
         elif '.csv' in filename:
             with open(filename, 'w', newline='') as f:
-                writer = csv.writer(f)
+                writer = writer(f)
                 for param in paramdict:
                     writer.writerow([param,paramdict[param]])
     Button(exportframe, text='7) Export parameters', command=export_params, fg='green').grid(row=0,column=3)

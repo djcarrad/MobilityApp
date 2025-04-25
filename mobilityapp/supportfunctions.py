@@ -3,8 +3,7 @@ from lmfit import Model, Parameters, minimize
 from scipy.signal import savgol_filter
 import matplotlib.pyplot as plt
 
-from tkinter import *
-import tkinter as tk
+from tkinter import Toplevel, Label
 
 class CreateToolTip(object):
     """
@@ -44,11 +43,11 @@ class CreateToolTip(object):
         x += self.widget.winfo_rootx() + 25
         y += self.widget.winfo_rooty() + 20
         # creates a toplevel window
-        self.tw = tk.Toplevel(self.widget)
+        self.tw = Toplevel(self.widget)
         # Leaves only the label and removes the app window
         self.tw.wm_overrideredirect(True)
         self.tw.wm_geometry("+%d+%d" % (x, y))
-        label = tk.Label(self.tw, text=self.text, justify='left',
+        label = Label(self.tw, text=self.text, justify='left',
                        background="#ffffff", relief='solid', borderwidth=1,
                        wraplength = self.wraplength)
         label.pack(ipadx=1)
