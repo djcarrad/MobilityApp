@@ -58,7 +58,7 @@ class CreateToolTip(object):
         if tw:
             tw.destroy()
             
-def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax,holes=False):
+def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax,holes=False,m=2):
     
     if holes:           #Flipping the data as if it was electrons means we can stick with good initial guesses no matter what
         dGdVg=-dGdVg[::-1]
@@ -148,10 +148,10 @@ def perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,Vmin,Vmax,holes=False):
     Vth_max=Vg_infl_max-(G_infl_max/(infl_slope+infl_slope_uncertainty))
     Vth_uncertainty = np.abs(Vth_max-Vth_min)/2
 
-    V0 = Vth-2*(Vg_infl-Vth)         #Vg for which density extrapolates to zero.
-    V0_uncertainty = np.sqrt(Vth_uncertainty**2 + (2*d_Vg_infl)**2)
+    V0 = Vth-m*(Vg_infl-Vth)         #Vg for which density extrapolates to zero.
+    V0_uncertainty = np.sqrt(Vth_uncertainty**2 + (m*d_Vg_infl)**2)
 
-    V_Rs = Vg_infl+2*(Vg_infl-Vth)   #Vg above which we will use to calculate series resistance
+    V_Rs = Vg_infl+m*(Vg_infl-Vth)   #Vg above which we will use to calculate series resistance
     
     inflectionline=G_infl+infl_slope*(Vg-Vg_infl)      #Draw a line tangential with the inflection point. Vg-intercept is Vth
 
@@ -216,7 +216,7 @@ def compute_mu_uncertainties(Vg,G,L,C,CperA,V0,Rs,d_L,d_C,d_CperA,d_V0,d_Rs,hole
     
     return d_mu,d_density
 
-def manual_inflection(Vg,G,Gsmooth,smoothing,Vg_infl,infl_slope):
+def manual_inflection(Vg,G,Gsmooth,smoothing,Vg_infl,infl_slope,m=2):
     if smoothing !=0:
         G_infl=np.interp(Vg_infl, Vg, Gsmooth)#Gsmooth[infl_ind]
     else:
@@ -225,11 +225,11 @@ def manual_inflection(Vg,G,Gsmooth,smoothing,Vg_infl,infl_slope):
     G_intercept = G_infl-infl_slope*Vg_infl  #Finding 'threshold' voltage
     Vth=-G_intercept/infl_slope
     
-    V_Rs = Vg_infl+2*(Vg_infl-Vth)   #Vg above which we will use to calculate series resistance
+    V_Rs = Vg_infl+m*(Vg_infl-Vth)   #Vg above which we will use to calculate series resistance
     
     inflectionline=infl_slope*Vg+G_intercept      #Draw a line tangential with the inflection point. Vg-intercept is Vth
 
-    V0 = Vth-2*(Vg_infl-Vth)         #Vg for which density extrapolates to zero.
+    V0 = Vth-m*(Vg_infl-Vth)         #Vg for which density extrapolates to zero.
 
     return V0,Vth,V_Rs,inflectionline
 
@@ -292,7 +292,7 @@ def perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,c,holes=False,findRs=True
     return mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude
 
 def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,d_L,C,d_C,CperA,d_CperA,initial_Rs,initial_mu,
-                             holes=False,plotting=True,findRs=True,d_Rs=None):
+                             holes=False,plotting=True,findRs=True,d_Rs=None,m=2):
 
     datadict={}
     paramdict={}
@@ -315,7 +315,7 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,d_L,C,d_C,CperA,d_CperA,
     fit_uncertainties,V0_uncertainty,Vth_uncertainty,d_Vg_infl)=perform_deriv_fit(Vg,G,
                                                                                     dGdVg,Gsmooth,smoothing,
                                                                                     Vmin=Vmin,Vmax=Vmax,
-                                                                                    holes=holes)
+                                                                                    holes=holes,m=m)
     datadict['dGdVg fit (S/V)']=deriv_fit
     datadict['dGdVg fit uncertainties (S/V)']=fit_uncertainties
     datadict['Inflection fit (S)']=inflectionline
