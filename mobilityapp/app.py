@@ -105,7 +105,7 @@ def run(scaling=0):
         (V0,Vth,Vg_infl,V_Rs,inflectionline,deriv_fit,result_deriv_fit,
         fit_uncertainties,V0_uncertainty,Vth_uncertainty,d_Vg_infl)=perform_deriv_fit(Vg,G,dGdVg,Gsmooth,smoothing,
                                                                                       Vmin=Vmin.get(),Vmax=Vmax.get(),
-                                                                                      holes=holes)
+                                                                                      holes=holes,m=float(m_val.get()))
         paramdict['V0 (V)']=V0
         paramdict['V0 uncertainty (V)']=V0_uncertainty
         paramdict['Vth (V)']=Vth
@@ -146,7 +146,7 @@ def run(scaling=0):
             Gsmooth=0
 
         V0,Vth,V_Rs,inflectionline=manual_inflection(Vg,G,Gsmooth,smoothing,
-                                                    float(Vg_inflman.get()),float(dGdVg_inflman.get())*1e-3)
+                                                    float(Vg_inflman.get()),float(dGdVg_inflman.get())*1e-3,m=float(m_val.get()))
 
         paramdict['V0 (V)']=V0
         paramdict['Vth (V)']=Vth
@@ -444,7 +444,29 @@ def run(scaling=0):
     Vsd_entry.grid(row=1,column=2)
     Label(GorIframe, text='(V)').grid(row=1,column=3,sticky='W')
     set_Vsd_entry()
-
+    mframe = ttk.Frame(dataframe, padding='3 3 10 10')
+    mframe.grid(column=0,row=4)
+    mhead=Label(mframe,text='Set factor m (almost always should be 2)')
+    mhead.grid(row=0,column=0,columnspan=3)
+    mequationstart=Label(mframe,text='V0 = Vth −')
+    mequationstart.grid(row=1,column=0,sticky='E')
+    m_val=StringVar()
+    m_val.set('2')
+    m_entry=Entry(mframe,textvariable=m_val,width=3)
+    m_entry.grid(row=1,column=1)
+    mequationend=Label(mframe, text='(Vinfl −Vth)')
+    mequationend.grid(row=1,column=2,sticky='W')
+    mtext=('The factor m relates V0 to Vth and Vinfl. '
+           'Only change this factor if you have a really good reason. '
+           'For all devices where this region in G vs Vg is dominated by '
+           'a transition between disorder-dominated percolation-limited transport '
+           'and conventional, Drude-like transport, m is 2. '
+           'Even so, changing m by up to a factor of 2 does not affect the trend of '
+           'mobility vs density, only the absolute values.')
+    CreateToolTip(m_entry,mtext)
+    CreateToolTip(mequationstart,mtext)
+    CreateToolTip(mequationend,mtext)
+    CreateToolTip(mhead,mtext)
         
     ## Enter parameters
     paramsframe = ttk.Frame(root, padding='3 3 12 3')
