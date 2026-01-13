@@ -461,7 +461,7 @@ def run(scaling=0):
            'For all devices where this region in G vs Vg is dominated by '
            'a transition between disorder-dominated percolation-limited transport '
            'and conventional, Drude-like transport, m is 2. '
-           'Even so, changing m by up to a factor of 2 does not affect the trend of '
+           'Even so, changing m by a factor of 2 does not affect the trend of '
            'mobility vs density, only the absolute values.')
     CreateToolTip(m_entry,mtext)
     CreateToolTip(mequationstart,mtext)
