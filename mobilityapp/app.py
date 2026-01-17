@@ -454,7 +454,7 @@ def run(scaling=0):
     m_val.set('2')
     m_entry=Entry(mframe,textvariable=m_val,width=3)
     m_entry.grid(row=1,column=1)
-    mequationend=Label(mframe, text='(Vinfl −Vth)')
+    mequationend=Label(mframe, text='(Vinfl − Vth)')
     mequationend.grid(row=1,column=2,sticky='W')
     mtext=('The factor m relates V0 to Vth and Vinfl. '
            'Only change this factor if you have a really good reason. '
