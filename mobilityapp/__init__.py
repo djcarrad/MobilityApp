@@ -5,7 +5,7 @@ import sys
 from mobilityapp.supportfunctions import (perform_deriv_fit, 
                                 perform_drude_fit, 
                                 perform_Rs_fit, 
-                                perform_entire_prodecure,
+                                perform_entire_procedure,
                                 manual_inflection,
                                 compute_asym_uncertainties,
                                 compute_mu_uncertainties)

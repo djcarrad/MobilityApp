@@ -291,7 +291,7 @@ def perform_drude_fit(Vg,G,Vth,initial_Rs,initial_mu,L,c,holes=False,findRs=True
     
     return mu_drude,drude_fit,Rs_drude,Vth_ind,result_drude
 
-def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,d_L,C,d_C,CperA,d_CperA,initial_Rs,initial_mu,
+def perform_entire_procedure(Vg,G,smoothing,Vmin,Vmax,L,d_L,C,d_C,CperA,d_CperA,initial_Rs,initial_mu,
                              holes=False,plotting=True,findRs=True,d_Rs=None,m=2):
 
     datadict={}
@@ -365,6 +365,7 @@ def perform_entire_prodecure(Vg,G,smoothing,Vmin,Vmax,L,d_L,C,d_C,CperA,d_CperA,
     else:
         datadict['Vg for mu_FET fit (V)']=Vg[Vth_ind:]
     datadict['mu_FET fit (S)']=drude_fit
+    paramdict['Rs_drude (Ohm)']=Rs_drude
     
     if plotting==True:
         plt.plot(Vg,G,label='data',color='k')
